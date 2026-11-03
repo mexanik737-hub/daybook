@@ -11,6 +11,7 @@ public partial class MainWindow : Window
     private DaybookDocument _document = new();
     public ObservableCollection<DaybookEntry> VisibleEntries { get; } = [];
     private string _section = "all";
+    private string _taskFilter = "all";
 
     public MainWindow()
     {
@@ -51,11 +52,18 @@ public partial class MainWindow : Window
         }
 
         source = source.Where(item =>
-            string.IsNullOrWhiteSpace(query) ||
-            item.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
-            item.Body.Contains(query, StringComparison.CurrentCultureIgnoreCase));
+            (string.IsNullOrWhiteSpace(query) ||
+             item.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+             item.Body.Contains(query, StringComparison.CurrentCultureIgnoreCase)) &&
+            (!item.IsTask || _taskFilter == "all" ||
+             (_taskFilter == "active" && !item.Done) ||
+             (_taskFilter == "done" && item.Done)));
+
+        if (TaskFilter is not null)
+            TaskFilter.Visibility = _section == "notes" ? Visibility.Collapsed : Visibility.Visible;
 
         foreach (var item in source.OrderBy(item => item.IsTask && item.Done)
+                     .ThenBy(item => item.IsTask ? item.Due ?? "9999" : "9999")
                      .ThenByDescending(item => item.Updated))
             VisibleEntries.Add(item);
 
@@ -90,6 +98,16 @@ public partial class MainWindow : Window
     private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
     {
         Refresh();
+    }
+
+    private void TaskFilter_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (TaskFilter?.SelectedItem is System.Windows.Controls.ComboBoxItem selected &&
+            selected.Tag is string filter)
+        {
+            _taskFilter = filter;
+            Refresh();
+        }
     }
 
     private Task PersistAsync() => _store.SaveAsync(_document);
