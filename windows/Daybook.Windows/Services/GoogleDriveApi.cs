@@ -59,8 +59,19 @@ public sealed class GoogleDriveApi
         var first = files[0];
         var id = first.GetProperty("id").GetString()!;
         var version = first.TryGetProperty("version", out var versionValue) ? versionValue.GetInt64() : 0;
-        var etag = response.Headers.ETag?.Tag;
-        return new DriveFile(id, DataFileName, version, etag);
+
+        using var metadataResponse = await SendAsync(
+            HttpMethod.Get,
+            $"{DriveApi}/files/{Uri.EscapeDataString(id)}?fields=id,name,version",
+            accessToken,
+            cancellationToken);
+        using var metadata = await JsonDocument.ParseAsync(
+            await metadataResponse.Content.ReadAsStreamAsync(cancellationToken),
+            cancellationToken: cancellationToken);
+        if (metadata.RootElement.TryGetProperty("version", out var latestVersion))
+            version = latestVersion.GetInt64();
+
+        return new DriveFile(id, DataFileName, version, metadataResponse.Headers.ETag?.Tag);
     }
 
     public async Task<DaybookDocument> DownloadDocumentAsync(
