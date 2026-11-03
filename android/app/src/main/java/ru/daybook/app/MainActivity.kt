@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -156,12 +155,12 @@ private fun DaybookApp(vm: DaybookViewModel) {
                     Text("ТВОИ ЗАДАЧИ", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
                     val homeTasks = tasks.filter { !it.done }.sortedBy { it.due ?: "9999" }.take(4)
                     if (homeTasks.isEmpty()) EmptyMessage("Задач пока нет.")
-                    else EntryList(homeTasks, vm, ::openEditor)
+                    else EntryList(homeTasks, vm, ::openEditor, Modifier.heightIn(max = 180.dp))
                     Spacer(Modifier.height(14.dp))
                     Text("ПОСЛЕДНИЕ ЗАМЕТКИ", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
                     val homeNotes = notes.sortedByDescending { it.updated }.take(3)
                     if (homeNotes.isEmpty()) EmptyMessage("Заметок пока нет.")
-                    else EntryList(homeNotes, vm, ::openEditor)
+                    else EntryList(homeNotes, vm, ::openEditor, Modifier.heightIn(max = 180.dp))
                 } else {
                     Text(if (section == "tasks") "Задачи" else "Заметки",
                         style = MaterialTheme.typography.headlineMedium)
