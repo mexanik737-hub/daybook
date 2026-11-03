@@ -10,6 +10,7 @@ public partial class MainWindow : Window
     private readonly LocalStore _store = new();
     private DaybookDocument _document = new();
     public ObservableCollection<DaybookEntry> VisibleEntries { get; } = [];
+    private string _section = "all";
 
     public MainWindow()
     {
@@ -33,11 +34,56 @@ public partial class MainWindow : Window
 
     private void Refresh()
     {
+        if (EntryList is null) return;
         VisibleEntries.Clear();
-        foreach (var item in _document.Tasks.OrderBy(x => x.Done).ThenBy(x => x.Due)
-                     .Concat(_document.Notes.OrderByDescending(x => x.Updated)))
+        var query = SearchBox?.Text?.Trim() ?? "";
+        IEnumerable<DaybookEntry> source = [];
+
+        if (_section is "all" or "tasks")
+        {
+            foreach (var task in _document.Tasks) task.IsTask = true;
+            source = source.Concat(_document.Tasks);
+        }
+        if (_section is "all" or "notes")
+        {
+            foreach (var note in _document.Notes) note.IsTask = false;
+            source = source.Concat(_document.Notes);
+        }
+
+        source = source.Where(item =>
+            string.IsNullOrWhiteSpace(query) ||
+            item.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+            item.Body.Contains(query, StringComparison.CurrentCultureIgnoreCase));
+
+        foreach (var item in source.OrderBy(item => item.IsTask && item.Done)
+                     .ThenByDescending(item => item.Updated))
             VisibleEntries.Add(item);
+
         EntryList.ItemsSource = VisibleEntries;
+        if (PageTitle is not null)
+            PageTitle.Text = _section switch
+            {
+                "tasks" => "Задачи",
+                "notes" => "Заметки",
+                _ => "Всё важное — в одном месте."
+            };
+    }
+
+    private void ShowTasks_Click(object sender, RoutedEventArgs e)
+    {
+        _section = "tasks";
+        Refresh();
+    }
+
+    private void ShowNotes_Click(object sender, RoutedEventArgs e)
+    {
+        _section = "notes";
+        Refresh();
+    }
+
+    private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        Refresh();
     }
 
     private Task PersistAsync() => _store.SaveAsync(_document);
