@@ -16,6 +16,12 @@ class DaybookSyncStateStore(context: Context) {
     fun baselineJson(): String? = preferences.getString(KEY_BASELINE, null)
     fun remoteFileId(): String? = preferences.getString(KEY_FILE_ID, null)
 
+    fun boardsBaselineJson(): String? = preferences.getString(KEY_BOARDS_BASELINE, null)
+
+    fun saveBoardsBaseline(baselineJson: String) {
+        preferences.edit().putString(KEY_BOARDS_BASELINE, baselineJson).apply()
+    }
+
     fun save(remoteFileId: String, baselineJson: String) {
         preferences.edit()
             .putString(KEY_FILE_ID, remoteFileId)
@@ -30,5 +36,6 @@ class DaybookSyncStateStore(context: Context) {
     private companion object {
         const val KEY_BASELINE = "baseline_json"
         const val KEY_FILE_ID = "remote_file_id"
+        const val KEY_BOARDS_BASELINE = "boards_baseline_json"
     }
 }
