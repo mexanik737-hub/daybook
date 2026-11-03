@@ -572,6 +572,61 @@ private fun DaybookEmpty(title: String, subtitle: String) {
     }
 }
 
+private fun entryDateGroup(entry: DaybookEntity): String {
+    val target = Calendar.getInstance()
+    if (entry.kind == "task" && !entry.due.isNullOrBlank()) {
+        val parts = entry.due.split("-")
+        if (parts.size == 3) {
+            runCatching {
+                target.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt(), 0, 0, 0)
+                target.set(Calendar.MILLISECOND, 0)
+            }
+        }
+    } else {
+        target.timeInMillis = entry.updated
+    }
+    target.set(Calendar.HOUR_OF_DAY, 0)
+    target.set(Calendar.MINUTE, 0)
+    target.set(Calendar.SECOND, 0)
+    target.set(Calendar.MILLISECOND, 0)
+
+    val today = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    val yesterday = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
+    val tomorrow = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
+    val weekStart = (today.clone() as Calendar).apply {
+        val daysFromMonday = (get(Calendar.DAY_OF_WEEK) + 5) % 7
+        add(Calendar.DAY_OF_YEAR, -daysFromMonday)
+    }
+    val weekEnd = (weekStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 6) }
+
+    fun sameDay(a: Calendar, b: Calendar) =
+        a.get(Calendar.YEAR) == b.get(Calendar.YEAR) &&
+            a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR)
+
+    return if (entry.kind == "task") {
+        when {
+            sameDay(target, today) -> "Сегодня"
+            target.before(today) -> "Просрочено"
+            sameDay(target, tomorrow) -> "Завтра"
+            !target.after(weekEnd) -> "На этой неделе"
+            else -> "Позже"
+        }
+    } else {
+        when {
+            sameDay(target, today) -> "Сегодня"
+            sameDay(target, yesterday) -> "Вчера"
+            !target.before(weekStart) && !target.after(weekEnd) -> "На этой неделе"
+            target.before(weekStart) -> "Ранее"
+            else -> "Позже"
+        }
+    }
+}
+
 @Composable
 private fun EntryList(
     items: List<DaybookEntity>,
@@ -579,47 +634,70 @@ private fun EntryList(
     onEdit: (String, DaybookEntity?) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isTasks = items.firstOrNull()?.kind == "task"
+    val groupOrder = if (isTasks) {
+        listOf("Просрочено", "Сегодня", "Завтра", "На этой неделе", "Позже", "Без срока")
+    } else {
+        listOf("Сегодня", "Вчера", "На этой неделе", "Ранее", "Позже")
+    }
+    val grouped = items.groupBy { entry ->
+        if (entry.kind == "task" && entry.due.isNullOrBlank()) "Без срока"
+        else entryDateGroup(entry)
+    }
     LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(items, key = { it.id }) { entry ->
-            val noteColors = listOf(
-                androidx.compose.ui.graphics.Color(0xFF3A3429),
-                androidx.compose.ui.graphics.Color(0xFF303A2D),
-                androidx.compose.ui.graphics.Color(0xFF2D3440),
-                androidx.compose.ui.graphics.Color(0xFF3A2D2C)
-            )
-            val cardColor = if (entry.kind == "note") noteColors[kotlin.math.abs(entry.id.hashCode()) % noteColors.size]
-                else androidx.compose.ui.graphics.Color(0xFF20221E)
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = cardColor),
-                border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0x30FFFFFF)),
-                modifier = Modifier.fillMaxWidth().clickable { onEdit(entry.kind, entry) }
-            ) {
-                Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (entry.kind == "task") {
-                        Checkbox(checked = entry.done, onCheckedChange = { vm.toggle(entry) },
-                            colors = CheckboxDefaults.colors(checkedColor = androidx.compose.ui.graphics.Color(0xFFA9BE9B)))
-                    } else {
-                        Text("✦", modifier = Modifier.padding(horizontal = 8.dp), color = androidx.compose.ui.graphics.Color(0xFFC4B18E))
-                    }
-                    Column(Modifier.weight(1f)) {
-                        Text(entry.title, style = MaterialTheme.typography.titleSmall.copy(textDecoration = if (entry.kind == "task" && entry.done) TextDecoration.LineThrough else TextDecoration.None), color = if (entry.kind == "task" && entry.done) androidx.compose.ui.graphics.Color(0xFF888493) else androidx.compose.ui.graphics.Color(0xFFE8E7E3))
-                        if (entry.body.isNotBlank()) {
-                            Spacer(Modifier.height(3.dp))
-                            Text(entry.body, maxLines = 3, color = if (entry.kind == "task" && entry.done) androidx.compose.ui.graphics.Color(0xFF888493) else androidx.compose.ui.graphics.Color(0xFFB8B8AF),
-                                style = MaterialTheme.typography.bodySmall.copy(textDecoration = if (entry.kind == "task" && entry.done) TextDecoration.LineThrough else TextDecoration.None))
+        groupOrder.forEach { group ->
+            val groupItems = grouped[group].orEmpty()
+            if (groupItems.isNotEmpty()) {
+                item(key = "header-$group") {
+                    Text(
+                        group,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = androidx.compose.ui.graphics.Color(0xFFC9B9F5),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp)
+                    )
+                }
+                items(groupItems, key = { it.id }) { entry ->
+                    val noteColors = listOf(
+                        androidx.compose.ui.graphics.Color(0xFF30283D),
+                        androidx.compose.ui.graphics.Color(0xFF292F3D),
+                        androidx.compose.ui.graphics.Color(0xFF383044),
+                        androidx.compose.ui.graphics.Color(0xFF34303A)
+                    )
+                    val cardColor = if (entry.kind == "note") noteColors[kotlin.math.abs(entry.id.hashCode()) % noteColors.size]
+                        else androidx.compose.ui.graphics.Color(0xFF20202B)
+                    Card(
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = cardColor),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0x30FFFFFF)),
+                        modifier = Modifier.fillMaxWidth().clickable { onEdit(entry.kind, entry) }
+                    ) {
+                        Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (entry.kind == "task") {
+                                Checkbox(checked = entry.done, onCheckedChange = { vm.toggle(entry) },
+                                    colors = CheckboxDefaults.colors(checkedColor = androidx.compose.ui.graphics.Color(0xFFB69CFF)))
+                            } else {
+                                Text("✦", modifier = Modifier.padding(horizontal = 8.dp), color = androidx.compose.ui.graphics.Color(0xFFC4B18E))
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(entry.title, style = MaterialTheme.typography.titleSmall.copy(textDecoration = if (entry.kind == "task" && entry.done) TextDecoration.LineThrough else TextDecoration.None), color = if (entry.kind == "task" && entry.done) androidx.compose.ui.graphics.Color(0xFF888493) else androidx.compose.ui.graphics.Color(0xFFE8E7E3))
+                                if (entry.body.isNotBlank()) {
+                                    Spacer(Modifier.height(3.dp))
+                                    Text(entry.body, maxLines = 3, color = if (entry.kind == "task" && entry.done) androidx.compose.ui.graphics.Color(0xFF888493) else androidx.compose.ui.graphics.Color(0xFFB8B8AF),
+                                        style = MaterialTheme.typography.bodySmall.copy(textDecoration = if (entry.kind == "task" && entry.done) TextDecoration.LineThrough else TextDecoration.None))
+                                }
+                                if (entry.kind == "task") {
+                                    val meta = listOfNotNull(
+                                        entry.due?.takeIf { it.isNotBlank() }?.let { "Срок: " + it },
+                                        when (entry.priority) { "high" -> "Высокий приоритет"; "low" -> "Низкий приоритет"; else -> null }
+                                    ).joinToString(" · ")
+                                    if (meta.isNotBlank()) Text(meta, style = MaterialTheme.typography.labelSmall,
+                                        color = androidx.compose.ui.graphics.Color(0xFFB69CFF))
+                                }
+                            }
+                            TextButton(onClick = { vm.delete(entry) }) {
+                                Text("⋯", style = MaterialTheme.typography.titleLarge, color = androidx.compose.ui.graphics.Color(0xFFA7A69F))
+                            }
                         }
-                        if (entry.kind == "task") {
-                            val meta = listOfNotNull(
-                                entry.due?.takeIf { it.isNotBlank() }?.let { "Срок: " + it },
-                                when (entry.priority) { "high" -> "Высокий приоритет"; "low" -> "Низкий приоритет"; else -> null }
-                            ).joinToString(" · ")
-                            if (meta.isNotBlank()) Text(meta, style = MaterialTheme.typography.labelSmall,
-                                color = androidx.compose.ui.graphics.Color(0xFFA9BE9B))
-                        }
-                    }
-                    TextButton(onClick = { vm.delete(entry) }) {
-                        Text("⋯", style = MaterialTheme.typography.titleLarge, color = androidx.compose.ui.graphics.Color(0xFFA7A69F))
                     }
                 }
             }
