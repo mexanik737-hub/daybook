@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -22,4 +23,10 @@ interface DaybookDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(entries: List<DaybookEntity>)
+
+    @Transaction
+    suspend fun replaceAll(entries: List<DaybookEntity>) {
+        clear()
+        upsertAll(entries)
+    }
 }
