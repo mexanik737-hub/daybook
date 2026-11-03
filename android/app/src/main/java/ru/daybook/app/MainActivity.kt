@@ -253,6 +253,8 @@ private fun DaybookApp(
     var due by remember { mutableStateOf("") }
     var priority by remember { mutableStateOf("normal") }
     var priorityMenu by remember { mutableStateOf(false) }
+    var boardEditorOpen by remember { mutableStateOf(false) }
+    var boardEditorId by remember { mutableStateOf<String?>(null) }
 
     val ink = androidx.compose.ui.graphics.Color(0xFFE8E7E3)
     val muted = androidx.compose.ui.graphics.Color(0xFFA7A69F)
@@ -261,6 +263,7 @@ private fun DaybookApp(
     val purpleDeep = androidx.compose.ui.graphics.Color(0xFF7047D8)
     val tasks = entries.filter { it.kind == "task" }
     val notes = entries.filter { it.kind == "note" }
+    val boards = entries.filter { it.kind == "board" }.sortedByDescending { it.updated }
     val query = search.trim().lowercase()
     val filteredTasks = tasks.filter {
         (it.title + " " + it.body).lowercase().contains(query) &&
@@ -293,13 +296,13 @@ private fun DaybookApp(
         Scaffold(
             containerColor = canvas,
             floatingActionButton = {
-                if (section != "boards") ExtendedFloatingActionButton(
-                    onClick = { openEditor(if (section == "tasks") "task" else "note") },
+                ExtendedFloatingActionButton(
+                    onClick = { if (section == "boards") { boardEditorId = null; boardEditorOpen = true } else openEditor(if (section == "tasks") "task" else "note") },
                     containerColor = purpleDeep,
                     contentColor = androidx.compose.ui.graphics.Color.White,
                     shape = RoundedCornerShape(18.dp),
                     icon = { Text("+", style = MaterialTheme.typography.titleLarge) },
-                    text = { Text(if (section == "tasks") "Новая задача" else "Новая заметка") }
+                    text = { Text(when (section) { "tasks" -> "Новая задача"; "boards" -> "Новая схема"; else -> "Новая заметка" }) }
                 )
             },
             bottomBar = {
@@ -428,8 +431,44 @@ private fun DaybookApp(
                     else EntryList(filteredNotes, vm, ::openEditor, Modifier.weight(1f))
                 } else {
                     Text("Визуальные схемы", style = MaterialTheme.typography.titleLarge, color = ink)
-                    Spacer(Modifier.height(8.dp))
-                    DaybookEmpty("Рабочее поле готовится", "Здесь появятся блоки, фигуры и связи между идеями.")
+                    Text("Создавай блоки и соединяй их стрелками", style = MaterialTheme.typography.bodySmall, color = muted)
+                    Spacer(Modifier.height(12.dp))
+                    if (boards.isEmpty()) DaybookEmpty("Пока нет схем", "Нажми «Новая схема», чтобы создать карту идей или блок-схему.")
+                    else LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(boards, key = { it.id }) { board ->
+                            Card(modifier = Modifier.fillMaxWidth().clickable { boardEditorId = board.id; boardEditorOpen = true },
+                                shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color(0xFF292438))) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text("◇", color = accent, style = MaterialTheme.typography.headlineMedium)
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(board.title, color = ink, style = MaterialTheme.typography.titleMedium)
+                                        Text("Визуальная схема", color = muted, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    TextButton(onClick = { vm.delete(board) }) { Text("Удалить", color = androidx.compose.ui.graphics.Color(0xFFE58D9B)) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (boardEditorOpen) {
+            val currentBoard = entries.firstOrNull { it.id == boardEditorId && it.kind == "board" }
+            key(boardEditorId) {
+                Dialog(onDismissRequest = { boardEditorOpen = false }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+                    Surface(modifier = Modifier.fillMaxSize(), color = canvas, shape = RoundedCornerShape(0.dp)) {
+                        BoardEditor(
+                            initialTitle = currentBoard?.title ?: "",
+                            initialJson = currentBoard?.body ?: "",
+                            onClose = { boardEditorOpen = false },
+                            onSave = { boardTitle, boardBody ->
+                                vm.save(boardEditorId, "board", boardTitle, boardBody, null, "normal")
+                                boardEditorOpen = false
+                            }
+                        )
+                    }
                 }
             }
         }
