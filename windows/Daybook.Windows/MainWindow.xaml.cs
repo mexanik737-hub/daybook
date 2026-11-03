@@ -205,7 +205,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private Task PersistAsync() => _store.SaveAsync(_document);
+    private async Task PersistAsync()
+    {
+        await _store.SaveAsync(_document);
+        ScheduleDriveSync();
+    }
 
     private async void AddTask_Click(object sender, RoutedEventArgs e) => await EditEntryAsync(true);
     private async void AddNote_Click(object sender, RoutedEventArgs e) => await EditEntryAsync(false);
