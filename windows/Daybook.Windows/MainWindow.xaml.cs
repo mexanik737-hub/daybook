@@ -83,6 +83,27 @@ public partial class MainWindow : Window
         Refresh();
     }
 
+    private async void DriveSettings_Click(object sender, RoutedEventArgs e)
+    {
+        var oauth = new GoogleOAuthPkceClient();
+        var currentClientId = await oauth.GetConfiguredClientIdAsync();
+        var dialog = new DriveSettingsWindow(currentClientId) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            await oauth.ConfigureClientIdAsync(dialog.ClientId);
+            MessageBox.Show(
+                "OAuth Client ID сохранён. Следующий шаг — подключение аккаунта и синхронизация с папкой Daybook на Google Drive.",
+                "Daybook · Google Drive", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Daybook · Google Drive",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void ShowTasks_Click(object sender, RoutedEventArgs e)
     {
         _section = "tasks";
