@@ -21,6 +21,13 @@ jobs:
           gradle-version: '8.13'
       - name: Build Android debug APK
         run: gradle -p android assembleDebug
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: daybook-android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
 
   windows:
     runs-on: windows-latest
@@ -29,5 +36,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Build Windows app
-        run: dotnet build windows/Daybook.Windows/Daybook.Windows.csproj -c Release
+      - name: Publish Windows single-file app
+        run: dotnet publish windows/Daybook.Windows/Daybook.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+      - name: Upload Windows app
+        uses: actions/upload-artifact@v4
+        with:
+          name: daybook-windows-x64
+          path: windows/Daybook.Windows/bin/Release/net10.0-windows/win-x64/publish/
+          if-no-files-found: error
+          retention-days: 14
