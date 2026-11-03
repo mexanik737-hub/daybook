@@ -12,6 +12,7 @@
                     <TextBlock Text="НАВИГАЦИЯ" Foreground="{StaticResource MutedText}" Margin="0,0,0,12"/>
                     <Button Content="☑   Задачи" Click="ShowTasks_Click" Height="44" HorizontalContentAlignment="Left" Padding="12,0" Margin="0,0,0,8"/>
                     <Button Content="▤   Заметки" Click="ShowNotes_Click" Height="44" HorizontalContentAlignment="Left" Padding="12,0"/>
+                    <Button Content="⌂   Все записи" Click="ShowAll_Click" Height="44" HorizontalContentAlignment="Left" Padding="12,0" Margin="0,8,0,0"/>
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Bottom" Text="Локальное хранение · офлайн-режим" Foreground="{StaticResource MutedText}" Margin="0,20,0,0" TextWrapping="Wrap"/>
             </DockPanel>
