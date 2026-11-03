@@ -23,6 +23,10 @@
                 <TextBlock Text="ТВОЙ ДЕНЬ" Foreground="{StaticResource MutedText}" FontSize="11" FontWeight="SemiBold"/>
                 <TextBlock x:Name="PageTitle" Text="Всё важное — в одном месте." FontSize="34" FontWeight="SemiBold" Margin="0,8,0,0"/>
                 <TextBlock Text="Задачи и заметки сохраняются на этом компьютере." Foreground="{StaticResource MutedText}" Margin="0,8,0,0"/><TextBox x:Name="SearchBox" Height="38" Margin="0,18,0,0" Padding="10,7" Background="{StaticResource PanelBackground}" Foreground="{StaticResource PrimaryText}" BorderBrush="#292E39" TextChanged="SearchBox_TextChanged" ToolTip="Поиск по записям"/>
+                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                    <Button Content="+ Новая задача" Click="AddTask_Click" Height="38" Padding="14,0" Margin="0,0,8,0" Background="{StaticResource Accent}" Foreground="#111318" FontWeight="SemiBold"/>
+                    <Button Content="+ Новая заметка" Click="AddNote_Click" Height="38" Padding="14,0"/>
+                </StackPanel>
             </StackPanel>
             <ListBox x:Name="EntryList" Grid.Row="1" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="EntryList_MouseDoubleClick">
                 <ListBox.ItemTemplate>
