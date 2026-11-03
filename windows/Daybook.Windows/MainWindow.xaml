@@ -23,7 +23,7 @@
                 <TextBlock Text="Всё важное — в одном месте." FontSize="34" FontWeight="SemiBold" Margin="0,8,0,0"/>
                 <TextBlock Text="Задачи и заметки сохраняются на этом компьютере." Foreground="{StaticResource MutedText}" Margin="0,8,0,0"/>
             </StackPanel>
-            <ListBox x:Name="EntryList" Grid.Row="1" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox x:Name="EntryList" Grid.Row="1" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="EntryList_MouseDoubleClick">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Border Background="{StaticResource PanelBackground}" CornerRadius="12" Padding="16" Margin="0,0,0,10">
