@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
+import com.google.android.gms.common.api.ApiException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -45,9 +46,7 @@ class MainActivity : ComponentActivity() {
     private var driveAccessToken by mutableStateOf<String?>(null)
     private lateinit var authorizationLauncher: androidx.activity.result.ActivityResultLauncher<IntentSenderRequest>
     private val tokenRefreshHandler = Handler(Looper.getMainLooper())
-    private val tokenRefreshRunnable = Runnable {
-        if (driveConnected) authorizeDrive()
-    }
+    private val tokenRefreshRunnable = Runnable { if (driveConnected) authorizeDrive(allowResolution = false) }
     private val drivePreferences by lazy {
         getSharedPreferences("daybook_auth", MODE_PRIVATE)
     }
@@ -67,7 +66,7 @@ class MainActivity : ComponentActivity() {
         authorizationLauncher = registerForActivityResult(
             ActivityResultContracts.StartIntentSenderForResult()
         ) { result ->
-            if (result.resultCode == RESULT_OK && result.data != null) {
+            if (result.data != null) {
                 runCatching {
                     Identity.getAuthorizationClient(this)
                         .getAuthorizationResultFromIntent(result.data!!)
@@ -78,15 +77,23 @@ class MainActivity : ComponentActivity() {
                         drivePreferences.edit().putBoolean("connected", true).apply()
                         scheduleTokenRefresh()
                     }
-                    driveStatus = if (driveConnected) "Google Drive подключён" else "Не удалось получить токен"
+                    driveStatus = if (driveConnected) "Google Drive подключён" else
+                        "Google не выдал токен. Проверь разрешение доступа к Drive."
                 }.onFailure { error ->
                     driveConnected = false
-                    driveStatus = error.message ?: "Ошибка авторизации"
+                    driveAccessToken = null
+                    drivePreferences.edit().putBoolean("connected", false).apply()
+                    driveStatus = if (error is ApiException) {
+                        "Ошибка Google OAuth (" + error.statusCode + "): " + (error.status.statusMessage ?: "без описания")
+                    } else {
+                        "Ошибка авторизации: " + (error.localizedMessage ?: error.javaClass.simpleName)
+                    }
                 }
             } else {
                 driveConnected = false
+                driveAccessToken = null
                 drivePreferences.edit().putBoolean("connected", false).apply()
-                driveStatus = "Авторизация отменена"
+                driveStatus = "Google вернул пустой результат (resultCode=" + result.resultCode + "). Проверь OAuth-настройки."
             }
         }
 
@@ -98,12 +105,12 @@ class MainActivity : ComponentActivity() {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
                     DaybookViewModel(repository, syncCoordinator) as T
             })
-            DaybookApp(vm, driveConnected, driveStatus, driveAccessToken, ::authorizeDrive)
+            DaybookApp(vm, driveConnected, driveStatus, driveAccessToken) { authorizeDrive(true) }
         }
-        if (drivePreferences.getBoolean("connected", false)) authorizeDrive()
+        if (drivePreferences.getBoolean("connected", false)) authorizeDrive(allowResolution = false)
     }
 
-    private fun authorizeDrive() {
+    private fun authorizeDrive(allowResolution: Boolean = true) {
         driveAccessToken = null
         driveConnected = false
         driveStatus = "Проверяем доступ к Google Drive…"
@@ -116,12 +123,15 @@ class MainActivity : ComponentActivity() {
             .addOnSuccessListener { result ->
                 if (result.hasResolution()) {
                     val pendingIntent = result.pendingIntent
-                    if (pendingIntent != null) {
+                    if (pendingIntent != null && allowResolution) {
                         authorizationLauncher.launch(
                             IntentSenderRequest.Builder(pendingIntent.intentSender).build()
                         )
+                    } else if (pendingIntent != null) {
+                        driveConnected = false
+                        driveStatus = "Нужно подтвердить доступ к Google Drive. Нажми кнопку подключения."
                     } else {
-                        driveStatus = "Google не вернул окно подтверждения"
+                        driveStatus = "Google сообщил, что требуется подтверждение, но не вернул окно авторизации."
                     }
                 } else {
                     driveAccessToken = result.accessToken
@@ -135,7 +145,11 @@ class MainActivity : ComponentActivity() {
             }
             .addOnFailureListener { error ->
                 driveConnected = false
-                driveStatus = error.message ?: "Ошибка подключения Google Drive"
+                driveStatus = if (error is ApiException) {
+                    "Ошибка Google OAuth (" + error.statusCode + "): " + (error.status.statusMessage ?: "без описания")
+                } else {
+                    "Ошибка подключения: " + (error.localizedMessage ?: error.javaClass.simpleName)
+                }
             }
     }
 }
