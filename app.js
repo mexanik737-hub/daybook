@@ -7,6 +7,7 @@ const GOOGLE_CLIENT_ID='731569027724-g32icn6rg67mun8vrvjti68metjv6tnm.apps.googl
 let state={tasks:[],notes:[]},view='home',taskFilter='all',noteFilter='all',tokenClient=null,accessToken=null,toastTimer=null;
 
 const $=id=>document.getElementById(id);
+const HOME_TEMPLATE=$('content').innerHTML;
 const uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
 const today=()=>new Date().toISOString().slice(0,10);
 
@@ -86,6 +87,7 @@ function renderNotes(){
 }
 
 function render(){
+  if(view==='home'&&!$('homeTasks'))$('content').innerHTML=HOME_TEMPLATE;
   if(view==='home')renderHome();
   else if(view==='tasks')renderTasks();
   else renderNotes();
@@ -207,8 +209,8 @@ document.addEventListener('click',e=>{
     return;
   }
 
-  if(e.target.id==='quickTask'||e.target.id==='addTaskPage')openEditor('task');
-  if(e.target.id==='quickNote'||e.target.id==='newNoteTop'||e.target.id==='addNotePage')openEditor('note');
+  if(e.target.closest('#quickTask,#addTaskPage')){openEditor('task');return;}
+  if(e.target.closest('#quickNote,#newNoteTop,#addNotePage')){openEditor('note');return;}
 });
 
 $('searchInput').addEventListener('input',()=>{
@@ -225,9 +227,11 @@ $('searchInput').addEventListener('input',()=>{
 });
 
 function setSyncUI(connected){
-  $('syncStatus').innerHTML=connected?'<span class="status-dot online"></span><span>Google Drive подключён</span>':'<span class="status-dot"></span><span>Только на этом устройстве</span>';
-
+  const status=connected?'<span class="status-dot online"></span><span>Google Drive подключён</span>':'<span class="status-dot"></span><span>Только на этом устройстве</span>';
+  $('syncStatus').innerHTML=status;
   $('driveButton').innerHTML=connected?'<span class="nav-icon">☁</span>Синхронизировать':'<span class="nav-icon">☁</span>Подключить Google Drive';
+  $('topSyncStatus').innerHTML=connected?'<span class="status-dot online"></span><span>Drive подключён</span>':'<span class="status-dot"></span><span>Локально</span>';
+  $('driveButtonTop').innerHTML=connected?'☁ <span>Синхр.</span>':'☁ <span>Drive</span>';
 }
 
 function driveInit(){
@@ -389,10 +393,12 @@ async function syncDrive(){
   }
 }
 
-$('driveButton').addEventListener('click',()=>{
+function driveAction(){
   if(accessToken)syncDrive();
   else driveInit();
-});
+}
+$('driveButton').addEventListener('click',driveAction);
+$('driveButtonTop').addEventListener('click',driveAction);
 
 window.addEventListener('online',()=>{
   if(accessToken)syncDrive();
