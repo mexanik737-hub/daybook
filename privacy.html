@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111318">
+  <meta name="description" content="Политика конфиденциальности Daybook">
+  <title>Политика конфиденциальности — Daybook</title>
+  <style>
+    :root{color-scheme:dark;--bg:#111318;--panel:#191c24;--text:#f1f2f5;--muted:#a3a8b5;--line:#2b303b;--accent:#a99aff}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.7 system-ui,-apple-system,Segoe UI,sans-serif}
+    main{width:min(820px,calc(100% - 32px));margin:48px auto;padding:clamp(22px,5vw,42px);background:var(--panel);border:1px solid var(--line);border-radius:20px}
+    a{color:var(--accent)}h1{font-size:clamp(28px,5vw,38px);line-height:1.2;margin:0 0 8px}h2{font-size:20px;margin:30px 0 8px}
+    p,li{color:#d4d7df}.muted,small{color:var(--muted)}.back{display:inline-block;margin-bottom:24px;text-decoration:none}
+    ul{padding-left:22px}footer{border-top:1px solid var(--line);margin-top:32px;padding-top:18px;color:var(--muted);font-size:14px}
+  </style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">← Вернуться в Daybook</a>
+  <h1>Политика конфиденциальности Daybook</h1>
+  <p class="muted">Дата последнего обновления: 4 ноября 2026 года</p>
+
+  <p>Daybook — личное веб-приложение для создания заметок и управления задачами. Эта политика объясняет, какие данные обрабатывает приложение и как работает необязательная интеграция с Google Drive.</p>
+
+  <h2>1. Какие данные обрабатывает Daybook</h2>
+  <p>Приложение обрабатывает только информацию, которую пользователь самостоятельно вводит в заметки и задачи: названия, текст, сроки, приоритеты и отметки выполнения. Эти данные хранятся локально в хранилище браузера (localStorage) на устройстве пользователя.</p>
+
+  <h2>2. Google Drive и данные Google</h2>
+  <p>Подключение Google Drive является необязательным. Если пользователь выбирает подключение, Daybook использует Google OAuth для получения разрешения на доступ к специальной папке данных приложения (Google Drive appDataFolder) через разрешение <code>drive.appdata</code>.</p>
+  <p>В рамках этой функции приложение может читать и записывать файл данных Daybook в appDataFolder. В этот файл входят заметки и задачи, введённые пользователем. Приложение не запрашивает доступ ко всему содержимому Google Drive, Gmail, контактам или другим сервисам Google.</p>
+  <p>Запросы к Google Drive API выполняются браузером пользователя напрямую. Разработчик Daybook не получает и не хранит копии заметок, задач, файлов Google Drive или OAuth-токенов на собственном сервере. В текущей версии временный токен доступа хранится в памяти открытой страницы и сбрасывается при её перезагрузке или закрытии.</p>
+
+  <h2>3. Для чего используются данные</h2>
+  <p>Данные заметок и задач используются только для отображения и работы функций Daybook, а при добровольном подключении Google Drive — для резервного хранения и синхронизации между устройствами. Данные Google не продаются, не используются для рекламы и не передаются разработчиком другим лицам.</p>
+
+  <h2>4. Передача и хранение</h2>
+  <p>Локальные данные остаются в хранилище браузера на устройстве пользователя. Если включено подключение Google Drive, копия данных хранится в appDataFolder аккаунта Google пользователя и обрабатывается Google в соответствии с условиями и политиками Google. Daybook не использует собственный сервер для хранения пользовательских заметок и задач.</p>
+
+  <h2>5. Сторонние сервисы</h2>
+  <p>Для авторизации используется библиотека Google Identity Services, загружаемая с домена Google, а для работы с облачными данными — Google Drive API. Использование этих сервисов регулируется документами Google: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Политика конфиденциальности Google</a>.</p>
+
+  <h2>6. Безопасность и контроль пользователя</h2>
+  <p>Доступ к Google Drive предоставляется только после явного действия пользователя на экране согласия Google. Пользователь может отозвать доступ Daybook в настройках безопасности своего аккаунта Google. Без подключения Google Drive данные остаются только в локальном хранилище браузера.</p>
+
+  <h2>7. Изменения политики и связь</h2>
+  <p>Эта политика может обновляться при изменении функций приложения или способов обработки данных. Актуальная версия всегда доступна по этому адресу. По вопросам работы приложения можно обратиться по адресу поддержки, указанному на экране согласия Google для Daybook.</p>
+
+  <footer>Daybook · Личное приложение для заметок и задач</footer>
+</main>
+</body>
+</html>
