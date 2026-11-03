@@ -110,7 +110,7 @@ public sealed class DriveSyncCoordinator
         await SaveBaselineAsync(finalFile.Id, merged);
         return new SyncOutcome(
             DocumentsEqual(local, merged) && DocumentsEqual(remote, merged) ? "unchanged" : "merged",
-            "Синхронизация завершена. Изменения с устройств объединены без потери независимых записей.");
+            "Синхронизация завершена. Изменения с устройств объединены.");
     }
 
     private async Task SaveBaselineAsync(string fileId, DaybookDocument document)
