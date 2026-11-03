@@ -256,7 +256,7 @@ function driveInit(){
 
   tokenClient=google.accounts.oauth2.initTokenClient({
     client_id:GOOGLE_CLIENT_ID,
-    scope:'https://www.googleapis.com/auth/drive.appdata',
+    scope:'https://www.googleapis.com/auth/drive.file',
     callback:async(resp)=>{
       if(resp.error){
         showToast('Не удалось подключить Google Drive');
@@ -290,25 +290,37 @@ async function syncDrive(){
   if(!accessToken)return;
 
   try{
-    const files=await driveFetch('files?spaces=appDataFolder&fields=files(id,name)&pageSize=100');
+    const q=encodeURIComponent("name='Daybook' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+    const folders=await driveFetch('files?q='+q+'&spaces=drive&fields=files(id,name)&pageSize=100');
+    let folder=folders.files.find(f=>f.name==='Daybook');
+
+    if(!folder){
+      folder=await driveFetch('files?fields=id,name',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:'Daybook',mimeType:'application/vnd.google-apps.folder'})
+      });
+    }
+
+    const fileQ=encodeURIComponent("'"+folder.id+"' in parents and name='"+DRIVE_FILE+"' and trashed=false");
+    const files=await driveFetch('files?q='+fileQ+'&spaces=drive&fields=files(id,name)&pageSize=100');
     const file=files.files.find(f=>f.name===DRIVE_FILE);
     const localJSON=JSON.stringify(state);
     const localEmpty=!state.tasks.length&&!state.notes.length;
 
     async function writeRemote(fileId,data){
       const boundary='daybook_'+uid();
-
       const metadata=fileId
         ?{name:DRIVE_FILE,mimeType:'application/json'}
-        :{name:DRIVE_FILE,mimeType:'application/json',parents:['appDataFolder']};
+        :{name:DRIVE_FILE,mimeType:'application/json',parents:[folder.id]};
 
       const body=
-        '--'+boundary+'\r\n'+
-        'Content-Type: application/json; charset=UTF-8\r\n\r\n'+
-        JSON.stringify(metadata)+'\r\n'+
-        '--'+boundary+'\r\n'+
-        'Content-Type: application/json\r\n\r\n'+
-        JSON.stringify(data)+'\r\n'+
+        '--'+boundary+'\\r\\n'+
+        'Content-Type: application/json; charset=UTF-8\\r\\n\\r\\n'+
+        JSON.stringify(metadata)+'\\r\\n'+
+        '--'+boundary+'\\r\\n'+
+        'Content-Type: application/json\\r\\n\\r\\n'+
+        JSON.stringify(data)+'\\r\\n'+
         '--'+boundary+'--';
 
       const url=fileId
@@ -323,20 +335,18 @@ async function syncDrive(){
         },
         body
       });
-
       if(!response.ok)throw new Error('Drive upload: '+response.status);
     }
 
     if(!file){
       await writeRemote(null,state);
       localStorage.setItem(SYNC_BASE_KEY,localJSON);
-      showToast('Данные сохранены в Google Drive');
+      showToast('Данные сохранены в папке Daybook на Google Drive');
       $('footerSync').textContent='Синхронизация с Google Drive включена';
       return;
     }
 
     const remote=await driveFetch('files/'+file.id+'?alt=media');
-
     if(!remote||!Array.isArray(remote.tasks)||!Array.isArray(remote.notes)){
       throw new Error('Некорректный формат данных в Drive');
     }
@@ -350,18 +360,16 @@ async function syncDrive(){
         localStorage.setItem(STORAGE_KEY,remoteJSON);
         localStorage.setItem(SYNC_BASE_KEY,remoteJSON);
         render();
-        showToast('Данные загружены из Google Drive');
+        showToast('Данные загружены из папки Daybook');
         $('footerSync').textContent='Синхронизация с Google Drive включена';
         return;
       }
-
       if(localJSON===remoteJSON){
         localStorage.setItem(SYNC_BASE_KEY,localJSON);
         showToast('Данные уже синхронизированы');
         $('footerSync').textContent='Синхронизация с Google Drive включена';
         return;
       }
-
       showToast('Конфликт данных: автоматическая запись остановлена');
       return;
     }
@@ -387,7 +395,7 @@ async function syncDrive(){
     if(localChanged&&!remoteChanged){
       await writeRemote(file.id,state);
       localStorage.setItem(SYNC_BASE_KEY,localJSON);
-      showToast('Изменения отправлены в Google Drive');
+      showToast('Изменения отправлены в папку Daybook');
       $('footerSync').textContent='Синхронизация с Google Drive включена';
       return;
     }
@@ -395,7 +403,6 @@ async function syncDrive(){
     localStorage.setItem(SYNC_BASE_KEY,localJSON);
     showToast('Данные уже синхронизированы');
     $('footerSync').textContent='Синхронизация с Google Drive включена';
-
   }catch(err){
     console.error(err);
     showToast('Ошибка синхронизации. Локальные данные сохранены');
