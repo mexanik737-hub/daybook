@@ -26,6 +26,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -77,6 +79,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun authorizeDrive() {
+        driveAccessToken = null
+        driveConnected = false
+        driveStatus = "Проверяем доступ к Google Drive…"
         val request = AuthorizationRequest.builder()
             .setRequestedScopes(listOf(Scope("https://www.googleapis.com/auth/drive.file")))
             .build()
@@ -115,25 +120,64 @@ class DaybookViewModel(
         viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList()
     )
 
+    private var activeAccessToken: String? = null
+    private var syncJob: Job? = null
+    private var debounceJob: Job? = null
+    private var syncAgain = false
+
     fun save(
         id: String?, kind: String, title: String, body: String,
         due: String?, priority: String
     ) = viewModelScope.launch {
         repository.save(id = id, kind = kind, title = title, body = body, due = due, priority = priority)
+        scheduleSync()
     }
 
-    fun sync(accessToken: String) = viewModelScope.launch {
-        syncStatus.value = "Синхронизация с Google Drive…"
-        try {
-            val result = syncCoordinator.sync(accessToken)
-            syncStatus.value = result.message
-        } catch (error: Exception) {
-            syncStatus.value = error.message ?: "Ошибка синхронизации"
+    fun sync(accessToken: String) {
+        activeAccessToken = accessToken
+        requestSync()
+    }
+
+    fun syncNow() = requestSync()
+
+    private fun scheduleSync() {
+        if (activeAccessToken == null) return
+        debounceJob?.cancel()
+        debounceJob = viewModelScope.launch {
+            delay(900)
+            requestSync()
         }
     }
 
-    fun toggle(entry: DaybookEntity) = viewModelScope.launch { repository.toggleDone(entry) }
-    fun delete(entry: DaybookEntity) = viewModelScope.launch { repository.delete(entry.id) }
+    private fun requestSync() {
+        val token = activeAccessToken ?: return
+        if (syncJob?.isActive == true) {
+            syncAgain = true
+            return
+        }
+        syncJob = viewModelScope.launch {
+            do {
+                syncAgain = false
+                syncStatus.value = "Синхронизация с Google Drive…"
+                try {
+                    val result = syncCoordinator.sync(token)
+                    syncStatus.value = result.message
+                } catch (error: Exception) {
+                    syncStatus.value = error.message ?: "Ошибка синхронизации"
+                }
+            } while (syncAgain)
+        }
+    }
+
+    fun toggle(entry: DaybookEntity) = viewModelScope.launch {
+        repository.toggleDone(entry)
+        scheduleSync()
+    }
+
+    fun delete(entry: DaybookEntity) = viewModelScope.launch {
+        repository.delete(entry.id)
+        scheduleSync()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -141,7 +185,15 @@ class DaybookViewModel(
 private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatus: String, accessToken: String?, onConnectDrive: () -> Unit) {
     val entries by vm.entries.collectAsState()
     val syncStatus by vm.syncStatus.collectAsState()
-    LaunchedEffect(accessToken) { if (accessToken != null) vm.sync(accessToken) }
+    LaunchedEffect(accessToken) {
+        if (accessToken != null) {
+            vm.sync(accessToken)
+            while (true) {
+                delay(30_000)
+                vm.syncNow()
+            }
+        }
+    }
     val context = LocalContext.current
     var section by remember { mutableStateOf("home") }
     var taskFilter by remember { mutableStateOf("all") }
