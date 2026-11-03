@@ -101,7 +101,7 @@ class GoogleDriveApi(
                 metadata.toRequestBody("application/json; charset=UTF-8".toMediaType())
             )
             .addPart(
-                okhttp3.Headers.headersOf("Content-Type", "application/json; charset=UTF-8"),
+                okhttp3.Headers.Builder().add("Content-Type", "application/json; charset=UTF-8").build(),
                 payload.toRequestBody("application/json; charset=UTF-8".toMediaType())
             )
             .build()
