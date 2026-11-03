@@ -1,5 +1,5 @@
 
-const CACHE='daybook-static-v5';
+const CACHE='daybook-static-v6';
 
 const FILES=[
   './',
