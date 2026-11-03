@@ -60,8 +60,7 @@ class DaybookRepository(context: Context) {
     suspend fun importDocument(document: DaybookDocument) {
         val rows = document.tasks.map { it.toEntity("task") } +
             document.notes.map { it.toEntity("note") }
-        dao.clear()
-        dao.upsertAll(rows)
+        dao.replaceAll(rows)
     }
 
     private fun DaybookEntry.toEntity(kind: String) = DaybookEntity(
