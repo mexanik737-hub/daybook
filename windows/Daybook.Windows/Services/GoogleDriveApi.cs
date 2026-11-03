@@ -96,6 +96,9 @@ public sealed class GoogleDriveApi
         string? expectedETag = null,
         CancellationToken cancellationToken = default)
     {
+        if (fileId is not null && (string.IsNullOrWhiteSpace(expectedETag) || expectedETag.StartsWith("W/", StringComparison.Ordinal)))
+            throw new GoogleDriveException(412, "Google Drive не вернул сильный ETag; обновление остановлено ради защиты от перезаписи.");
+
         var boundary = "daybook_" + Guid.NewGuid().ToString("N");
         var metadata = fileId is null
             ? JsonSerializer.Serialize(new { name = DataFileName, mimeType = "application/json", parents = new[] { folderId } })
