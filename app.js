@@ -42,9 +42,14 @@ function dateLabel(){
 }
 
 function setView(v){
+  if(!['home','tasks','notes'].includes(v)||v===view)return;
   view=v;
-  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
   render();
+  document.querySelectorAll('[data-view]').forEach(b=>{
+    const active=b.dataset.view===view;
+    b.classList.toggle('active',active);
+    if(b.matches('button'))b.setAttribute('aria-current',active?'page':'false');
+  });
 }
 
 function taskRow(t){
@@ -94,7 +99,11 @@ function render(){
 
   $('taskCount').textContent=state.tasks.filter(t=>!t.done).length;
 
-  document.querySelectorAll('.nav-item[data-view],.mobile-nav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+  document.querySelectorAll('[data-view]').forEach(b=>{
+    const active=b.dataset.view===view;
+    b.classList.toggle('active',active);
+    if(b.matches('button'))b.setAttribute('aria-current',active?'page':'false');
+  });
 }
 
 function openEditor(type,id=null){
