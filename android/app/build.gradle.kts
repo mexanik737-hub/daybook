@@ -18,6 +18,34 @@ android {
         versionName = "0.1.0"
     }
 
+    val releaseStorePath = System.getenv("DAYBOOK_KEYSTORE_PATH")
+    val releaseStorePassword = System.getenv("DAYBOOK_KEYSTORE_PASSWORD")
+    val releaseKeyAlias = System.getenv("DAYBOOK_KEY_ALIAS")
+    val releaseKeyPassword = System.getenv("DAYBOOK_KEY_PASSWORD")
+    val hasReleaseSigning = listOf(
+        releaseStorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword
+    ).all { !it.isNullOrBlank() }
+
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigning) {
+                storeFile = file(releaseStorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
