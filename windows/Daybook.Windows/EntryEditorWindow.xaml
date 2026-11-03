@@ -1,0 +1,52 @@
+<Window x:Class="Daybook.Windows.EntryEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Запись Daybook" Height="610" Width="540" MinHeight="560" MinWidth="480"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource PrimaryText}">
+    <Grid Margin="26">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock x:Name="DialogEyebrow" Text="НОВАЯ ЗАПИСЬ" Foreground="{StaticResource Accent}" FontSize="11" FontWeight="SemiBold"/>
+            <TextBlock x:Name="DialogTitle" Text="Заметка" FontSize="28" FontWeight="SemiBold" Margin="0,7,0,20"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Margin="0,0,0,14">
+            <TextBlock Text="Название" Foreground="{StaticResource MutedText}" Margin="0,0,0,6"/>
+            <TextBox x:Name="TitleBox" Height="40" Padding="10,8" FontSize="14"
+                     Background="{StaticResource PanelBackground}" Foreground="{StaticResource PrimaryText}"
+                     BorderBrush="#343A46" VerticalContentAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Row="2">
+            <TextBlock Text="Текст" Foreground="{StaticResource MutedText}" Margin="0,0,0,6"/>
+            <TextBox x:Name="BodyBox" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                     Padding="10" FontSize="13" Background="{StaticResource PanelBackground}"
+                     Foreground="{StaticResource PrimaryText}" BorderBrush="#343A46"/>
+        </StackPanel>
+        <Grid x:Name="TaskFields" Grid.Row="3" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,8,0">
+                <TextBlock Text="Срок выполнения" Foreground="{StaticResource MutedText}" Margin="0,0,0,6"/>
+                <DatePicker x:Name="DuePicker" Height="34" SelectedDateFormat="Short"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                <TextBlock Text="Приоритет" Foreground="{StaticResource MutedText}" Margin="0,0,0,6"/>
+                <ComboBox x:Name="PriorityBox" Height="34" SelectedIndex="1">
+                    <ComboBoxItem Content="Низкий" Tag="low"/>
+                    <ComboBoxItem Content="Обычный" Tag="normal"/>
+                    <ComboBoxItem Content="Высокий" Tag="high"/>
+                </ComboBox>
+            </StackPanel>
+        </Grid>
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+            <Button Content="Отмена" IsCancel="True" MinWidth="96" Height="38" Margin="0,0,8,0"/>
+            <Button Content="Сохранить" IsDefault="True" MinWidth="112" Height="38" Background="{StaticResource Accent}"
+                    Foreground="#111318" FontWeight="SemiBold" Click="Save_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
