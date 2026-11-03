@@ -1,5 +1,6 @@
 package ru.daybook.app
 
+import android.app.DatePickerDialog
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,7 +14,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalContext
+import java.util.Calendar
+import java.util.Locale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -60,6 +63,7 @@ class DaybookViewModel(private val repository: DaybookRepository) : ViewModel() 
 @Composable
 private fun DaybookApp(vm: DaybookViewModel) {
     val entries by vm.entries.collectAsState()
+    val context = LocalContext.current
     var section by remember { mutableStateOf("home") }
     var taskFilter by remember { mutableStateOf("all") }
     var search by remember { mutableStateOf("") }
@@ -210,12 +214,35 @@ private fun DaybookApp(vm: DaybookViewModel) {
                         OutlinedTextField(value = body, onValueChange = { body = it },
                             label = { Text("Текст") }, minLines = 3)
                         if (editorKind == "task") {
-                            OutlinedTextField(
-                                value = due, onValueChange = { due = it },
-                                label = { Text("Срок (ГГГГ-ММ-ДД)") },
-                                placeholder = { Text("2026-12-31") }, singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedTextField(
+                                    value = due, onValueChange = {}, readOnly = true,
+                                    label = { Text("Срок выполнения") },
+                                    placeholder = { Text("Не задан") },
+                                    modifier = Modifier.weight(1f), singleLine = true
+                                )
+                                TextButton(onClick = {
+                                    val calendar = Calendar.getInstance()
+                                    val parts = due.split("-")
+                                    if (parts.size == 3) {
+                                        runCatching {
+                                            calendar.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
+                                        }
+                                    }
+                                    DatePickerDialog(
+                                        context,
+                                        { _, year, month, day ->
+                                            due = String.format(Locale.ROOT, "%04d-%02d-%02d", year, month + 1, day)
+                                        },
+                                        calendar.get(Calendar.YEAR),
+                                        calendar.get(Calendar.MONTH),
+                                        calendar.get(Calendar.DAY_OF_MONTH)
+                                    ).show()
+                                }) { Text("Выбрать") }
+                                if (due.isNotBlank()) {
+                                    TextButton(onClick = { due = "" }) { Text("×") }
+                                }
+                            }
                             ExposedDropdownMenuBox(
                                 expanded = priorityMenu,
                                 onExpandedChange = { priorityMenu = !priorityMenu }
