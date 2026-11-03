@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111318">
+  <meta name="description" content="Daybook — заметки и задачи в одном месте">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <title>Daybook</title>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">D</div><span>daybook</span></div>
+      <button class="nav-item active" data-view="home"><span class="nav-icon">⌂</span>Главная</button>
+      <button class="nav-item" data-view="tasks"><span class="nav-icon">☑</span>Задачи <span class="nav-count" id="taskCount">0</span></button>
+      <button class="nav-item" data-view="notes"><span class="nav-icon">▤</span>Заметки</button>
+      <div class="sidebar-bottom">
+        <div class="sync-status" id="syncStatus"><span class="status-dot"></span><span>Только на этом устройстве</span></div>
+        <button class="nav-item" id="driveButton"><span class="nav-icon">☁</span>Подключить Google Drive</button>
+        <div class="sidebar-foot">Тёмная тема · Личная версия</div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div class="mobile-brand"><div class="brand-mark">D</div><span>daybook</span></div>
+        <div class="search-wrap"><span>⌕</span><input id="searchInput" type="search" placeholder="Поиск заметок и задач..." aria-label="Поиск"></div>
+        <button class="icon-button" id="newNoteTop" title="Новая заметка">＋</button>
+        <button class="avatar" title="Личный профиль">Я</button>
+      </header>
+      <section class="content" id="content">
+        <div class="welcome">
+          <div><div class="eyebrow" id="dateLabel">ТВОЙ ДЕНЬ</div><h1>Всё важное —<br><span>в одном месте.</span></h1><p class="welcome-copy">Записывай мысли, планируй дела и возвращайся к ним когда угодно.</p></div>
+          <div class="welcome-art"><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-card"><span class="art-check">✓</span><span class="art-line long"></span><span class="art-line short"></span><span class="art-line medium"></span></div><div class="art-note">✦</div></div>
+        </div>
+        <div class="quick-actions">
+          <button class="quick-card" id="quickTask"><span class="quick-icon task-icon">☑</span><span><b>Новая задача</b><small>Добавить дело в список</small></span><span class="arrow">↗</span></button>
+          <button class="quick-card" id="quickNote"><span class="quick-icon note-icon">▤</span><span><b>Новая заметка</b><small>Сохранить мысль или идею</small></span><span class="arrow">↗</span></button>
+        </div>
+        <div class="section-heading"><div><div class="eyebrow">НА СЕГОДНЯ</div><h2>Твои задачи</h2></div><button class="text-button" data-view="tasks">Все задачи <span>→</span></button></div>
+        <div class="task-list" id="homeTasks"></div>
+        <div class="section-heading notes-heading"><div><div class="eyebrow">НЕ ПОТЕРЯТЬ</div><h2>Последние заметки</h2></div><button class="text-button" data-view="notes">Все заметки <span>→</span></button></div>
+        <div class="notes-grid" id="homeNotes"></div>
+      </section>
+      <footer class="footer"><span>Daybook</span><span id="footerSync">Данные хранятся локально</span></footer>
+    </main>
+  </div>
+  <nav class="mobile-nav">
+    <button class="active" data-view="home"><span>⌂</span>Главная</button>
+    <button data-view="tasks"><span>☑</span>Задачи</button>
+    <button data-view="notes"><span>▤</span>Заметки</button>
+  </nav>
+  <dialog id="editorDialog">
+    <form method="dialog" id="editorForm">
+      <div class="dialog-head"><div><div class="eyebrow" id="editorEyebrow">НОВАЯ ЗАПИСЬ</div><h2 id="editorTitle">Новая заметка</h2></div><button type="button" class="icon-button" id="closeDialog">×</button></div>
+      <input type="hidden" id="entryId">
+      <input id="entryTitle" class="title-input" placeholder="Название" maxlength="120" autocomplete="off">
+      <textarea id="entryBody" placeholder="Начни записывать..." rows="7"></textarea>
+      <div class="task-fields" id="taskFields">
+        <label>Срок <input type="date" id="entryDue"></label>
+        <label>Приоритет <select id="entryPriority"><option value="normal">Обычный</option><option value="high">Высокий</option><option value="low">Низкий</option></select></label>
+      </div>
+      <div class="dialog-actions"><button type="button" class="danger-button hidden" id="deleteEntry">Удалить</button><span class="spacer"></span><button type="button" class="secondary-button" id="cancelDialog">Отмена</button><button type="submit" class="primary-button">Сохранить</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="./app.js"></script>
+</body>
+</html>

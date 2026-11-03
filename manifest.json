@@ -1,0 +1,17 @@
+{
+  "name": "Daybook — заметки и задачи",
+  "short_name": "Daybook",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#111318",
+  "theme_color": "#111318",
+  "description": "Твои заметки и задачи в одном месте",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
