@@ -382,14 +382,14 @@ private fun DaybookApp(
                     }
                     Spacer(Modifier.height(24.dp))
                     SectionHeading("На сегодня", "Все задачи") { section = "tasks" }
-                    val homeTasks = tasks.filter { !it.done }.sortedBy { it.due ?: "9999" }.take(3)
+                    val homeTasks = tasks.filter { !it.done }.sortedBy { it.due ?: "9999" }.take(2)
                     if (homeTasks.isEmpty()) DaybookEmpty("Пока всё спокойно", "Добавь задачу, чтобы ничего не забыть.")
-                    else EntryList(homeTasks, vm, ::openEditor, Modifier.heightIn(max = 220.dp))
+                    else EntryList(homeTasks, vm, ::openEditor, Modifier.heightIn(max = 145.dp))
                     Spacer(Modifier.height(22.dp))
                     SectionHeading("Недавние заметки", "Все заметки") { section = "notes" }
-                    val homeNotes = notes.sortedByDescending { it.updated }.take(4)
+                    val homeNotes = notes.sortedByDescending { it.updated }.take(2)
                     if (homeNotes.isEmpty()) DaybookEmpty("Здесь будет твоя библиотека", "Сохраняй идеи, планы и важные мысли.")
-                    else EntryList(homeNotes, vm, ::openEditor, Modifier.heightIn(max = 260.dp))
+                    else EntryList(homeNotes, vm, ::openEditor, Modifier.heightIn(max = 145.dp))
                 } else {
                     DaybookSearchField(search, { search = it })
                     Spacer(Modifier.height(14.dp))
