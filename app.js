@@ -329,12 +329,12 @@ async function syncDrive(quiet=false){
         :{name:DRIVE_FILE,mimeType:'application/json',parents:[folder.id]};
 
       const body=
-        '--'+boundary+'\\r\\n'+
-        'Content-Type: application/json; charset=UTF-8\\r\\n\\r\\n'+
-        JSON.stringify(metadata)+'\\r\\n'+
-        '--'+boundary+'\\r\\n'+
-        'Content-Type: application/json\\r\\n\\r\\n'+
-        JSON.stringify(data)+'\\r\\n'+
+        '--'+boundary+'\r\\n'+
+        'Content-Type: application/json; charset=UTF-8\r\\n\r\\n'+
+        JSON.stringify(metadata)+'\r\\n'+
+        '--'+boundary+'\r\\n'+
+        'Content-Type: application/json\r\\n\r\\n'+
+        JSON.stringify(data)+'\r\\n'+
         '--'+boundary+'--';
 
       const url=fileId
@@ -375,13 +375,13 @@ async function syncDrive(quiet=false){
         localStorage.setItem(SYNC_BASE_KEY,remoteJSON);
         render();
         if(!quiet)showToast('Данные загружены из папки Daybook');
-        $('footerSync').textContent='Синхронизация с Google Drive включена';
+        $('footerSync').textContent='Автоматическая синхронизация включена';
         return;
       }
       if(localJSON===remoteJSON){
         localStorage.setItem(SYNC_BASE_KEY,localJSON);
-        if(!quiet)showToast('Данные уже синхронизированы');
-        $('footerSync').textContent='Синхронизация с Google Drive включена';
+        if(!quiet)if(!quiet)showToast('Данные уже синхронизированы');
+        $('footerSync').textContent='Автоматическая синхронизация включена';
         return;
       }
       if(!quiet)showToast('Конфликт данных: автоматическая запись остановлена');
@@ -402,7 +402,7 @@ async function syncDrive(quiet=false){
       localStorage.setItem(SYNC_BASE_KEY,remoteJSON);
       render();
       if(!quiet)showToast('Получены изменения из Google Drive');
-      $('footerSync').textContent='Синхронизация с Google Drive включена';
+      $('footerSync').textContent='Автоматическая синхронизация включена';
       return;
     }
 
@@ -410,13 +410,13 @@ async function syncDrive(quiet=false){
       await writeRemote(file.id,state);
       localStorage.setItem(SYNC_BASE_KEY,localJSON);
       if(!quiet)showToast('Изменения отправлены в папку Daybook');
-      $('footerSync').textContent='Синхронизация с Google Drive включена';
+      $('footerSync').textContent='Автоматическая синхронизация включена';
       return;
     }
 
     localStorage.setItem(SYNC_BASE_KEY,localJSON);
-    showToast('Данные уже синхронизированы');
-    $('footerSync').textContent='Синхронизация с Google Drive включена';
+    if(!quiet)showToast('Данные уже синхронизированы');
+    $('footerSync').textContent='Автоматическая синхронизация включена';
   }catch(err){
     console.error(err);
     if(!quiet)showToast(err.message==='Drive API: 401'?'Сеанс Google Drive истёк. Нажми «Подключить» снова.':'Ошибка синхронизации. Локальные данные сохранены');
