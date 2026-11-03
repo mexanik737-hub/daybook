@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -166,7 +167,7 @@ public sealed class GoogleOAuthPkceClient
         do { line = await reader.ReadLineAsync(cancellationToken); } while (!string.IsNullOrEmpty(line));
 
         var target = requestLine.Split(' ').ElementAtOrDefault(1) ?? "/";
-        var callback = new Uri(new Uri(redirectUri), target);
+        var callback = new Uri(redirectUri.TrimEnd('/') + target);
         var callbackQuery = ParseQuery(callback.Query);
         var html = "<html><body><h2>Daybook: авторизация завершена</h2><p>Можно закрыть это окно и вернуться в приложение.</p></body></html>";
         var bytes = Encoding.UTF8.GetBytes(html);
