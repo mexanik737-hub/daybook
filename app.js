@@ -328,13 +328,14 @@ async function syncDrive(quiet=false){
         ?{name:DRIVE_FILE,mimeType:'application/json'}
         :{name:DRIVE_FILE,mimeType:'application/json',parents:[folder.id]};
 
+      const crlf=String.fromCharCode(13,10);
       const body=
-        '--'+boundary+'\r\\n'+
-        'Content-Type: application/json; charset=UTF-8\r\\n\r\\n'+
-        JSON.stringify(metadata)+'\r\\n'+
-        '--'+boundary+'\r\\n'+
-        'Content-Type: application/json\r\\n\r\\n'+
-        JSON.stringify(data)+'\r\\n'+
+        '--'+boundary+crlf+
+        'Content-Type: application/json; charset=UTF-8'+crlf+crlf+
+        JSON.stringify(metadata)+crlf+
+        '--'+boundary+crlf+
+        'Content-Type: application/json'+crlf+crlf+
+        JSON.stringify(data)+crlf+
         '--'+boundary+'--';
 
       const url=fileId
