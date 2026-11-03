@@ -55,3 +55,8 @@ The native applications must use installed-app OAuth flows; they must not reuse 
 5. Windows refresh tokens must be protected with Windows DPAPI. Android should use Google Play services authorization and request a fresh access token when required; do not persist a raw access token.
 
 Do not distribute a release APK until the Android release signing key and matching OAuth Android client are configured. A CI debug APK is useful for early installation tests, but its signing certificate is not a stable release identity.
+
+
+## Concurrency limitation to validate
+
+The native clients send an HTTP `If-Match` precondition when updating the canonical Drive file and stop when a stale ETag is rejected. However, the Drive API v3 `files.update` reference does not explicitly document an atomic conditional-write guarantee. Until this behavior is validated against the actual Google project and account with simultaneous-device tests, do not treat the ETag check as a formally guaranteed compare-and-swap lock. The per-entry merge protects conflicts already visible at read time; a race during upload still requires real API validation.
