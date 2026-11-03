@@ -31,4 +31,7 @@ public sealed class DaybookEntry
 
     [JsonIgnore]
     public bool IsTask { get; set; }
+
+    [JsonIgnore]
+    public bool IsTask { get; set; }
 }
