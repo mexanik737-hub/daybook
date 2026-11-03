@@ -35,6 +35,31 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Decode Android release keystore
+        if: ${{ secrets.DAYBOOK_KEYSTORE_BASE64 != '' && secrets.DAYBOOK_KEYSTORE_PASSWORD != '' && secrets.DAYBOOK_KEY_ALIAS != '' && secrets.DAYBOOK_KEY_PASSWORD != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.DAYBOOK_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/daybook-release.jks"
+
+      - name: Build signed Android release APK
+        if: ${{ secrets.DAYBOOK_KEYSTORE_BASE64 != '' && secrets.DAYBOOK_KEYSTORE_PASSWORD != '' && secrets.DAYBOOK_KEY_ALIAS != '' && secrets.DAYBOOK_KEY_PASSWORD != '' }}
+        env:
+          DAYBOOK_KEYSTORE_PATH: ${{ runner.temp }}/daybook-release.jks
+          DAYBOOK_KEYSTORE_PASSWORD: ${{ secrets.DAYBOOK_KEYSTORE_PASSWORD }}
+          DAYBOOK_KEY_ALIAS: ${{ secrets.DAYBOOK_KEY_ALIAS }}
+          DAYBOOK_KEY_PASSWORD: ${{ secrets.DAYBOOK_KEY_PASSWORD }}
+        run: gradle -p android assembleRelease
+
+      - name: Upload signed Android release APK
+        if: ${{ secrets.DAYBOOK_KEYSTORE_BASE64 != '' && secrets.DAYBOOK_KEYSTORE_PASSWORD != '' && secrets.DAYBOOK_KEY_ALIAS != '' && secrets.DAYBOOK_KEY_PASSWORD != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: daybook-android-release
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
   windows:
     runs-on: windows-latest
     steps:
