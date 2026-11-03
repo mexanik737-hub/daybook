@@ -293,7 +293,7 @@ private fun DaybookApp(
         Scaffold(
             containerColor = canvas,
             floatingActionButton = {
-                ExtendedFloatingActionButton(
+                if (section != "boards") ExtendedFloatingActionButton(
                     onClick = { openEditor(if (section == "tasks") "task" else "note") },
                     containerColor = purpleDeep,
                     contentColor = androidx.compose.ui.graphics.Color.White,
@@ -404,7 +404,7 @@ private fun DaybookApp(
                     Spacer(Modifier.height(14.dp))
                     if (section == "tasks") {
                         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            listOf("all" to "Все", "active" to "Активные", "done" to "Готово").forEach { (key, label) ->
+                            listOf("all" to "Все", "active" to "Активные", "done" to "Завершённые").forEach { (key, label) ->
                                 FilterChip(
                                     selected = taskFilter == key,
                                     onClick = { taskFilter = key },
@@ -606,8 +606,8 @@ private fun EntryList(
                         Text(entry.title, style = MaterialTheme.typography.titleSmall.copy(textDecoration = if (entry.kind == "task" && entry.done) TextDecoration.LineThrough else TextDecoration.None), color = if (entry.kind == "task" && entry.done) androidx.compose.ui.graphics.Color(0xFF888493) else androidx.compose.ui.graphics.Color(0xFFE8E7E3))
                         if (entry.body.isNotBlank()) {
                             Spacer(Modifier.height(3.dp))
-                            Text(entry.body, maxLines = 3, color = androidx.compose.ui.graphics.Color(0xFFB8B8AF),
-                                style = MaterialTheme.typography.bodySmall)
+                            Text(entry.body, maxLines = 3, color = if (entry.kind == "task" && entry.done) androidx.compose.ui.graphics.Color(0xFF888493) else androidx.compose.ui.graphics.Color(0xFFB8B8AF),
+                                style = MaterialTheme.typography.bodySmall.copy(textDecoration = if (entry.kind == "task" && entry.done) TextDecoration.LineThrough else TextDecoration.None))
                         }
                         if (entry.kind == "task") {
                             val meta = listOfNotNull(
