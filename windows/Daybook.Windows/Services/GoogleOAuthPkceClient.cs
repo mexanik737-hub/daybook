@@ -37,7 +37,7 @@ public sealed class GoogleOAuthPkceClient
 
     public Task<string?> GetConfiguredClientIdAsync() => ReadClientIdAsync();
 
-    public async Task<string> GetAccessTokenAsync(bool forceInteractive = false, CancellationToken cancellationToken = default)
+    public async Task<string> GetAccessTokenAsync(bool forceInteractive = false, bool allowInteractive = true, CancellationToken cancellationToken = default)
     {
         var clientId = await ReadClientIdAsync();
         if (string.IsNullOrWhiteSpace(clientId))
@@ -57,12 +57,18 @@ public sealed class GoogleOAuthPkceClient
                 {
                     // The user revoked access or the saved grant is no longer valid.
                     if (File.Exists(RefreshTokenPath)) File.Delete(RefreshTokenPath);
+                    if (!allowInteractive)
+                        throw new GoogleOAuthException("reauthorization_required", "Требуется повторное подключение Google Drive.");
                 }
             }
         }
 
+        if (!allowInteractive)
+            throw new GoogleOAuthException("reauthorization_required", "Требуется повторное подключение Google Drive.");
         return await AuthorizeInteractivelyAsync(clientId, cancellationToken);
     }
+
+    public Task<bool> HasSavedRefreshTokenAsync() => Task.FromResult(File.Exists(RefreshTokenPath));
 
     public Task DisconnectAsync()
     {
