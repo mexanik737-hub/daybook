@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Collections.ObjectModel;
+using System.Windows.Threading;
 using Daybook.Windows.Models;
 using Daybook.Windows.Services;
 
@@ -8,6 +9,12 @@ namespace Daybook.Windows;
 public partial class MainWindow : Window
 {
     private readonly LocalStore _store = new();
+    private readonly GoogleOAuthPkceClient _oauth = new();
+    private readonly DriveSyncCoordinator _driveSync;
+    private readonly DispatcherTimer _syncDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(900) };
+    private readonly DispatcherTimer _syncPollTimer = new() { Interval = TimeSpan.FromSeconds(30) };
+    private bool _syncRunning;
+    private bool _syncAgain;
     private DaybookDocument _document = new();
     public ObservableCollection<DaybookEntry> VisibleEntries { get; } = [];
     private string _section = "all";
@@ -16,6 +23,17 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _driveSync = new DriveSyncCoordinator(_store);
+        _syncDebounceTimer.Tick += async (_, _) =>
+        {
+            _syncDebounceTimer.Stop();
+            await RunDriveSyncAsync(quiet: true, allowInteractive: false);
+        };
+        _syncPollTimer.Tick += async (_, _) =>
+        {
+            if (IsActive) await RunDriveSyncAsync(quiet: true, allowInteractive: false);
+        };
+        _syncPollTimer.Start();
         Loaded += async (_, _) => await LoadAsync();
     }
 
