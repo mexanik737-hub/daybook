@@ -3,6 +3,7 @@ package ru.daybook.app
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -97,15 +98,14 @@ fun BoardEditor(
             TextButton(onClick = { pan = Offset.Zero; zoom = 1f }) { Text("Сброс", color = muted) }
         }
         Box(Modifier.fillMaxWidth().weight(1f).background(Color(0xFF191622), RoundedCornerShape(18.dp))) {
-            Canvas(Modifier.fillMaxSize().pointerInput(doc, zoom, pan, connectFrom, connectMode, panMode, addShape) {
-                detectDragGestures(
-                    onDragStart = { point ->
+            Canvas(Modifier.fillMaxSize()
+                .pointerInput(doc, zoom, pan, connectFrom, connectMode, panMode, addShape) {
+                    detectTapGestures { point ->
                         val world = Offset((point.x - pan.x) / zoom, (point.y - pan.y) / zoom)
                         val hit = doc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
-                        if (panMode) {
-                            selectedId = null
-                        } else if (connectMode) {
-                            if (hit != null) {
+                        when {
+                            panMode -> selectedId = null
+                            connectMode && hit != null -> {
                                 val from = connectFrom
                                 if (from == null) {
                                     connectFrom = hit.id
@@ -117,17 +117,29 @@ fun BoardEditor(
                                     selectedId = hit.id
                                 }
                             }
-                        } else if (hit != null) {
+                            !connectMode && !panMode && hit != null -> selectedId = hit.id
+                            !connectMode && !panMode -> {
+                                val node = BoardNode(x = world.x, y = world.y, label = "Новый блок", shape = addShape)
+                                doc = doc.copy(nodes = doc.nodes + node)
+                                selectedId = node.id
+                            }
+                        }
+                    }
+                }
+                .pointerInput(doc, zoom, pan, panMode, connectMode, selectedId) {
+                detectDragGestures(
+                    onDragStart = { point ->
+                        val world = Offset((point.x - pan.x) / zoom, (point.y - pan.y) / zoom)
+                        val hit = doc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
+                        if (panMode) {
+                            selectedId = null
+                        } else if (!connectMode && hit != null) {
                             selectedId = hit.id
-                        } else {
-                            val node = BoardNode(x = world.x, y = world.y, label = "Новый блок", shape = addShape)
-                            doc = doc.copy(nodes = doc.nodes + node)
-                            selectedId = node.id
                         }
                     },
                     onDrag = { change, delta ->
                         change.consume()
-                        if (panMode || (connectMode && connectFrom == null)) {
+                        if (panMode) {
                             pan += delta
                         } else if (!connectMode && selectedId != null) {
                             doc = doc.copy(nodes = doc.nodes.map {
