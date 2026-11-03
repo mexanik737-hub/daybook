@@ -35,6 +35,8 @@ public sealed class GoogleOAuthPkceClient
         return !string.IsNullOrWhiteSpace(clientId);
     }
 
+    public Task<string?> GetConfiguredClientIdAsync() => ReadClientIdAsync();
+
     public async Task<string> GetAccessTokenAsync(bool forceInteractive = false, CancellationToken cancellationToken = default)
     {
         var clientId = await ReadClientIdAsync();
