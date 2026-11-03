@@ -97,7 +97,7 @@ class GoogleDriveApi(
         val multipart = MultipartBody.Builder("daybook_${UUID.randomUUID().toString().replace("-", "")}")
             .setType("multipart/related".toMediaType())
             .addPart(
-                okhttp3.Headers.headersOf("Content-Type", "application/json; charset=UTF-8"),
+                okhttp3.Headers.Builder().add("Content-Type", "application/json; charset=UTF-8").build(),
                 metadata.toRequestBody("application/json; charset=UTF-8".toMediaType())
             )
             .addPart(
@@ -129,7 +129,7 @@ class GoogleDriveApi(
         }
     }
 
-    private fun requestJson(
+    private suspend fun requestJson(
         accessToken: String,
         url: String,
         method: String = "GET",
