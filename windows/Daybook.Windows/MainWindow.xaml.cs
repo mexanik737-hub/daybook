@@ -69,6 +69,12 @@ public partial class MainWindow : Window
             };
     }
 
+    private void ShowAll_Click(object sender, RoutedEventArgs e)
+    {
+        _section = "all";
+        Refresh();
+    }
+
     private void ShowTasks_Click(object sender, RoutedEventArgs e)
     {
         _section = "tasks";
