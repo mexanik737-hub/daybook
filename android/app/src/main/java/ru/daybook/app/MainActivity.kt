@@ -225,18 +225,16 @@ class DaybookViewModel(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatus: String, accessToken: String?, onConnectDrive: () -> Unit) {
+private fun DaybookApp(
+    vm: DaybookViewModel,
+    driveConnected: Boolean,
+    driveStatus: String,
+    accessToken: String?,
+    onConnectDrive: () -> Unit
+) {
     val entries by vm.entries.collectAsState()
     val syncStatus by vm.syncStatus.collectAsState()
-    LaunchedEffect(accessToken) {
-        if (accessToken != null) {
-            vm.sync(accessToken)
-            while (true) {
-                delay(30_000)
-                vm.syncNow()
-            }
-        }
-    }
+    LaunchedEffect(accessToken) { if (accessToken != null) vm.sync(accessToken) }
     val context = LocalContext.current
     var section by remember { mutableStateOf("home") }
     var taskFilter by remember { mutableStateOf("all") }
@@ -249,16 +247,16 @@ private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatu
     var priority by remember { mutableStateOf("normal") }
     var priorityMenu by remember { mutableStateOf(false) }
 
+    val ink = androidx.compose.ui.graphics.Color(0xFF202124)
+    val muted = androidx.compose.ui.graphics.Color(0xFF77766F)
+    val canvas = androidx.compose.ui.graphics.Color(0xFFF7F6F2)
+    val accent = androidx.compose.ui.graphics.Color(0xFF566B52)
     val tasks = entries.filter { it.kind == "task" }
     val notes = entries.filter { it.kind == "note" }
     val query = search.trim().lowercase()
     val filteredTasks = tasks.filter {
         (it.title + " " + it.body).lowercase().contains(query) &&
-            when (taskFilter) {
-                "active" -> !it.done
-                "done" -> it.done
-                else -> true
-            }
+            when (taskFilter) { "active" -> !it.done; "done" -> it.done; else -> true }
     }.sortedWith(compareBy<DaybookEntity> { it.done }.thenBy { it.due ?: "9999" })
     val filteredNotes = notes.filter {
         (it.title + " " + it.body).lowercase().contains(query)
@@ -273,103 +271,150 @@ private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatu
         priority = entry?.priority ?: "normal"
     }
 
-    MaterialTheme(colorScheme = darkColorScheme(
-        primary = androidx.compose.ui.graphics.Color(0xFFA99BFF),
-        background = androidx.compose.ui.graphics.Color(0xFF111318),
-        surface = androidx.compose.ui.graphics.Color(0xFF1B1E25)
+    MaterialTheme(colorScheme = lightColorScheme(
+        primary = accent,
+        onPrimary = androidx.compose.ui.graphics.Color.White,
+        background = canvas,
+        onBackground = ink,
+        surface = androidx.compose.ui.graphics.Color(0xFFFFFEFB),
+        onSurface = ink,
+        surfaceVariant = androidx.compose.ui.graphics.Color(0xFFECEAE3),
+        onSurfaceVariant = muted,
+        secondary = androidx.compose.ui.graphics.Color(0xFFB8C5A9)
     )) {
         Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("daybook") },
-                    actions = {
-                        Column(horizontalAlignment = Alignment.End) {
-                            TextButton(onClick = onConnectDrive) { Text(if (driveConnected) "Drive ✓ · синхр." else "Подключить Drive") }
-                            Text(if (driveConnected) syncStatus else driveStatus,
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(end = 12.dp))
-                        }
-                    }
+            containerColor = canvas,
+            floatingActionButton = {
+                ExtendedFloatingActionButton(
+                    onClick = { openEditor(if (section == "tasks") "task" else "note") },
+                    containerColor = accent,
+                    contentColor = androidx.compose.ui.graphics.Color.White,
+                    shape = RoundedCornerShape(18.dp),
+                    icon = { Text("+", style = MaterialTheme.typography.titleLarge) },
+                    text = { Text(if (section == "tasks") "Новая задача" else "Новая заметка") }
                 )
             },
-            floatingActionButton = {
-                FloatingActionButton(onClick = {
-                    openEditor(if (section == "tasks") "task" else "note")
-                }) { Text("+") }
-            },
             bottomBar = {
-                NavigationBar {
-                    listOf("home" to "Главная", "tasks" to "Задачи", "notes" to "Заметки").forEach { (key, label) ->
+                NavigationBar(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFFFFFEFB),
+                    contentColor = accent,
+                    tonalElevation = 0.dp
+                ) {
+                    listOf("home" to "Обзор", "tasks" to "Задачи", "notes" to "Заметки").forEach { (key, label) ->
                         NavigationBarItem(
                             selected = section == key,
                             onClick = { section = key },
-                            icon = { Text(when (key) { "home" -> "⌂"; "tasks" -> "☑"; else -> "▤" }) },
-                            label = { Text(label) }
+                            icon = {
+                                Text(
+                                    when (key) { "home" -> "⌂"; "tasks" -> "✓"; else -> "▤" },
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            },
+                            label = { Text(label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = accent,
+                                selectedTextColor = accent,
+                                indicatorColor = androidx.compose.ui.graphics.Color(0xFFE5EBDD),
+                                unselectedIconColor = muted,
+                                unselectedTextColor = muted
+                            )
                         )
                     }
                 }
             }
         ) { padding ->
             Column(
-                Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp, vertical = 14.dp)
+                Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)
             ) {
-                if (section == "home") {
-                    Text("ТВОЙ ДЕНЬ", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
-                    Text("Всё важное —", style = MaterialTheme.typography.headlineMedium)
-                    Text("в одном месте.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineMedium)
-                    Spacer(Modifier.height(6.dp))
-                    Text("Записывай мысли, планируй дела и возвращайся к ним когда угодно.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(18.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { openEditor("task") }, modifier = Modifier.weight(1f)) {
-                            Text("+ Задача")
-                        }
-                        OutlinedButton(onClick = { openEditor("note") }, modifier = Modifier.weight(1f)) {
-                            Text("+ Заметка")
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            "DAYBOOK",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accent,
+                            letterSpacing = androidx.compose.ui.unit.TextUnit(2f, androidx.compose.ui.unit.TextUnitType.Sp)
+                        )
+                        Text(
+                            when (section) { "tasks" -> "Мои задачи"; "notes" -> "Мои заметки"; else -> "Моё пространство" },
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = ink
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = if (driveConnected) androidx.compose.ui.graphics.Color(0xFFE5EBDD) else androidx.compose.ui.graphics.Color(0xFFECEAE3),
+                        modifier = Modifier.clickable(onClick = onConnectDrive)
+                    ) {
+                        Row(
+                            Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(if (driveConnected) "●" else "○", color = if (driveConnected) accent else muted)
+                            Text(if (driveConnected) "Drive" else "Подключить", style = MaterialTheme.typography.labelMedium, color = ink)
                         }
                     }
-                    Spacer(Modifier.height(18.dp))
-                    Text("ТВОИ ЗАДАЧИ", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
-                    val homeTasks = tasks.filter { !it.done }.sortedBy { it.due ?: "9999" }.take(4)
-                    if (homeTasks.isEmpty()) EmptyMessage("Задач пока нет.")
-                    else EntryList(homeTasks, vm, ::openEditor, Modifier.heightIn(max = 180.dp))
-                    Spacer(Modifier.height(14.dp))
-                    Text("ПОСЛЕДНИЕ ЗАМЕТКИ", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
-                    val homeNotes = notes.sortedByDescending { it.updated }.take(3)
-                    if (homeNotes.isEmpty()) EmptyMessage("Заметок пока нет.")
-                    else EntryList(homeNotes, vm, ::openEditor, Modifier.heightIn(max = 180.dp))
-                } else {
-                    Text(if (section == "tasks") "Задачи" else "Заметки",
-                        style = MaterialTheme.typography.headlineMedium)
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = search, onValueChange = { search = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        placeholder = { Text("Поиск заметок и задач…") },
-                        leadingIcon = { Text("⌕") }
+                }
+
+                if (driveConnected || driveStatus != "Не подключён") {
+                    Text(
+                        if (driveConnected) syncStatus else driveStatus,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (driveConnected) accent else muted,
+                        modifier = Modifier.padding(bottom = 10.dp)
                     )
+                }
+
+                if (section == "home") {
+                    Text("Хорошие идеи начинаются с заметки.", style = MaterialTheme.typography.bodyLarge, color = muted)
+                    Spacer(Modifier.height(18.dp))
+                    DaybookSearchField(search, { search = it })
+                    Spacer(Modifier.height(22.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SummaryTile("Задачи", tasks.count { !it.done }.toString(), "осталось сделать",
+                            androidx.compose.ui.graphics.Color(0xFFE8EDE2), Modifier.weight(1f)) { section = "tasks" }
+                        SummaryTile("Заметки", notes.size.toString(), "сохранено мыслей",
+                            androidx.compose.ui.graphics.Color(0xFFF0E9DC), Modifier.weight(1f)) { section = "notes" }
+                    }
+                    Spacer(Modifier.height(24.dp))
+                    SectionHeading("На сегодня", "Все задачи") { section = "tasks" }
+                    val homeTasks = tasks.filter { !it.done }.sortedBy { it.due ?: "9999" }.take(3)
+                    if (homeTasks.isEmpty()) DaybookEmpty("Пока всё спокойно", "Добавь задачу, чтобы ничего не забыть.")
+                    else EntryList(homeTasks, vm, ::openEditor, Modifier.heightIn(max = 220.dp))
+                    Spacer(Modifier.height(22.dp))
+                    SectionHeading("Недавние заметки", "Все заметки") { section = "notes" }
+                    val homeNotes = notes.sortedByDescending { it.updated }.take(4)
+                    if (homeNotes.isEmpty()) DaybookEmpty("Здесь будет твоя библиотека", "Сохраняй идеи, планы и важные мысли.")
+                    else EntryList(homeNotes, vm, ::openEditor, Modifier.heightIn(max = 260.dp))
+                } else {
+                    DaybookSearchField(search, { search = it })
+                    Spacer(Modifier.height(14.dp))
                     if (section == "tasks") {
-                        Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("all" to "Все", "active" to "Активные", "done" to "Выполненные").forEach { (key, label) ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            listOf("all" to "Все", "active" to "Активные", "done" to "Готово").forEach { (key, label) ->
                                 FilterChip(
                                     selected = taskFilter == key,
                                     onClick = { taskFilter = key },
-                                    label = { Text(label) }
+                                    label = { Text(label) },
+                                    shape = RoundedCornerShape(50),
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = androidx.compose.ui.graphics.Color(0xFFE5EBDD),
+                                        selectedLabelColor = accent
+                                    )
                                 )
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
-                        if (filteredTasks.isEmpty()) EmptyMessage("Ничего не найдено")
+                        Spacer(Modifier.height(10.dp))
+                        if (filteredTasks.isEmpty()) DaybookEmpty("Ничего не найдено", "Попробуй изменить запрос или добавь новую задачу.")
                         else EntryList(filteredTasks, vm, ::openEditor, Modifier.weight(1f))
                     } else {
-                        Spacer(Modifier.height(8.dp))
-                        Text("${filteredNotes.size} заметок", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelSmall)
-                        Spacer(Modifier.height(8.dp))
-                        if (filteredNotes.isEmpty()) EmptyMessage("Ничего не найдено")
+                        Text(filteredNotes.size.toString() + " заметок", style = MaterialTheme.typography.labelMedium, color = muted)
+                        Spacer(Modifier.height(10.dp))
+                        if (filteredNotes.isEmpty()) DaybookEmpty("Заметок пока нет", "Нажми «Новая заметка», чтобы записать мысль.")
                         else EntryList(filteredNotes, vm, ::openEditor, Modifier.weight(1f))
                     }
                 }
@@ -379,46 +424,40 @@ private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatu
         if (editorKind != null) {
             AlertDialog(
                 onDismissRequest = { editorKind = null },
-                title = { Text(if (editingId == null) {
-                    if (editorKind == "task") "Новая задача" else "Новая заметка"
-                } else {
-                    if (editorKind == "task") "Редактировать задачу" else "Редактировать заметку"
-                }) },
+                containerColor = androidx.compose.ui.graphics.Color(0xFFFFFEFB),
+                title = {
+                    Text(if (editingId == null) {
+                        if (editorKind == "task") "Новая задача" else "Новая заметка"
+                    } else {
+                        if (editorKind == "task") "Редактировать задачу" else "Редактировать заметку"
+                    })
+                },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(value = title, onValueChange = { title = it },
-                            label = { Text("Название") }, singleLine = true)
+                            label = { Text("Название") }, singleLine = true, shape = RoundedCornerShape(14.dp))
                         OutlinedTextField(value = body, onValueChange = { body = it },
-                            label = { Text("Текст") }, minLines = 3)
+                            label = { Text("Текст") }, minLines = 3, shape = RoundedCornerShape(14.dp))
                         if (editorKind == "task") {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 OutlinedTextField(
                                     value = due, onValueChange = {}, readOnly = true,
-                                    label = { Text("Срок выполнения") },
-                                    placeholder = { Text("Не задан") },
-                                    modifier = Modifier.weight(1f), singleLine = true
+                                    label = { Text("Срок") }, placeholder = { Text("Не задан") },
+                                    modifier = Modifier.weight(1f), singleLine = true,
+                                    shape = RoundedCornerShape(14.dp)
                                 )
                                 TextButton(onClick = {
                                     val calendar = Calendar.getInstance()
                                     val parts = due.split("-")
-                                    if (parts.size == 3) {
-                                        runCatching {
-                                            calendar.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
-                                        }
+                                    if (parts.size == 3) runCatching {
+                                        calendar.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
                                     }
-                                    DatePickerDialog(
-                                        context,
-                                        { _, year, month, day ->
-                                            due = String.format(Locale.ROOT, "%04d-%02d-%02d", year, month + 1, day)
-                                        },
-                                        calendar.get(Calendar.YEAR),
-                                        calendar.get(Calendar.MONTH),
-                                        calendar.get(Calendar.DAY_OF_MONTH)
-                                    ).show()
+                                    DatePickerDialog(context, { _, year, month, day ->
+                                        due = String.format(Locale.ROOT, "%04d-%02d-%02d", year, month + 1, day)
+                                    }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH),
+                                        calendar.get(Calendar.DAY_OF_MONTH)).show()
                                 }) { Text("Выбрать") }
-                                if (due.isNotBlank()) {
-                                    TextButton(onClick = { due = "" }) { Text("×") }
-                                }
+                                if (due.isNotBlank()) TextButton(onClick = { due = "" }) { Text("×") }
                             }
                             ExposedDropdownMenuBox(
                                 expanded = priorityMenu,
@@ -428,13 +467,12 @@ private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatu
                                     value = when (priority) { "high" -> "Высокий"; "low" -> "Низкий"; else -> "Обычный" },
                                     onValueChange = {}, readOnly = true, label = { Text("Приоритет") },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = priorityMenu) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                    shape = RoundedCornerShape(14.dp)
                                 )
                                 ExposedDropdownMenu(expanded = priorityMenu, onDismissRequest = { priorityMenu = false }) {
                                     listOf("normal" to "Обычный", "high" to "Высокий", "low" to "Низкий").forEach { (key, label) ->
-                                        DropdownMenuItem(text = { Text(label) }, onClick = {
-                                            priority = key; priorityMenu = false
-                                        })
+                                        DropdownMenuItem(text = { Text(label) }, onClick = { priority = key; priorityMenu = false })
                                     }
                                 }
                             }
@@ -447,17 +485,15 @@ private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatu
                             vm.save(editingId, editorKind!!, title, body, due.takeIf { it.isNotBlank() }, priority)
                             editorKind = null
                         }
-                    }) { Text("Сохранить") }
+                    }) { Text("Сохранить", color = accent) }
                 },
                 dismissButton = {
                     Row {
-                        if (editingId != null) {
-                            TextButton(onClick = {
-                                entries.firstOrNull { it.id == editingId }?.let(vm::delete)
-                                editorKind = null
-                            }) { Text("Удалить") }
-                        }
-                        TextButton(onClick = { editorKind = null }) { Text("Отмена") }
+                        if (editingId != null) TextButton(onClick = {
+                            entries.firstOrNull { it.id == editingId }?.let(vm::delete)
+                            editorKind = null
+                        }) { Text("Удалить", color = androidx.compose.ui.graphics.Color(0xFFB34C42)) }
+                        TextButton(onClick = { editorKind = null }) { Text("Отмена", color = muted) }
                     }
                 }
             )
@@ -466,13 +502,63 @@ private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatu
 }
 
 @Composable
-private fun EmptyMessage(message: String) {
+private fun DaybookSearchField(value: String, onValueChange: (String) -> Unit) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        placeholder = { Text("Поиск по заметкам и задачам…") },
+        leadingIcon = { Text("⌕", style = MaterialTheme.typography.titleLarge) },
+        shape = RoundedCornerShape(16.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = androidx.compose.ui.graphics.Color(0xFFECEAE3),
+            unfocusedContainerColor = androidx.compose.ui.graphics.Color(0xFFECEAE3),
+            disabledContainerColor = androidx.compose.ui.graphics.Color(0xFFECEAE3),
+            focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+            unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
+        )
+    )
+}
+
+@Composable
+private fun SummaryTile(
+    title: String, value: String, caption: String,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(modifier = modifier.clickable(onClick = onClick), color = color, shape = RoundedCornerShape(20.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.labelLarge, color = androidx.compose.ui.graphics.Color(0xFF55564F))
+            Spacer(Modifier.height(8.dp))
+            Text(value, style = MaterialTheme.typography.headlineLarge, color = androidx.compose.ui.graphics.Color(0xFF202124))
+            Text(caption, style = MaterialTheme.typography.labelSmall, color = androidx.compose.ui.graphics.Color(0xFF77766F))
+        }
+    }
+}
+
+@Composable
+private fun SectionHeading(title: String, action: String, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(title, style = MaterialTheme.typography.titleLarge, color = androidx.compose.ui.graphics.Color(0xFF202124))
+        TextButton(onClick = onClick) { Text(action, color = androidx.compose.ui.graphics.Color(0xFF566B52)) }
+    }
+}
+
+@Composable
+private fun DaybookEmpty(title: String, subtitle: String) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(14.dp)
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        color = androidx.compose.ui.graphics.Color(0xFFECEAE3),
+        shape = RoundedCornerShape(18.dp)
     ) {
-        Text(message, modifier = Modifier.padding(18.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.padding(18.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = androidx.compose.ui.graphics.Color(0xFF30312D))
+            Spacer(Modifier.height(4.dp))
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = androidx.compose.ui.graphics.Color(0xFF77766F))
+        }
     }
 }
 
@@ -483,28 +569,48 @@ private fun EntryList(
     onEdit: (String, DaybookEntity?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items(items, key = { it.id }) { entry ->
-            Card(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            val noteColors = listOf(
+                androidx.compose.ui.graphics.Color(0xFFF0E9DC),
+                androidx.compose.ui.graphics.Color(0xFFE8EDE2),
+                androidx.compose.ui.graphics.Color(0xFFE8EBF1),
+                androidx.compose.ui.graphics.Color(0xFFF1E6E3)
+            )
+            val cardColor = if (entry.kind == "note") noteColors[kotlin.math.abs(entry.id.hashCode()) % noteColors.size]
+                else androidx.compose.ui.graphics.Color(0xFFFFFEFB)
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = cardColor),
+                border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0x12000000)),
+                modifier = Modifier.fillMaxWidth().clickable { onEdit(entry.kind, entry) }
+            ) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (entry.kind == "task") {
-                        Checkbox(checked = entry.done, onCheckedChange = { vm.toggle(entry) })
+                        Checkbox(checked = entry.done, onCheckedChange = { vm.toggle(entry) },
+                            colors = CheckboxDefaults.colors(checkedColor = androidx.compose.ui.graphics.Color(0xFF566B52)))
+                    } else {
+                        Text("✦", modifier = Modifier.padding(horizontal = 8.dp), color = androidx.compose.ui.graphics.Color(0xFF8B806B))
                     }
-                    Column(Modifier.weight(1f).clickable { onEdit(entry.kind, entry) }) {
-                        Text(entry.title, style = MaterialTheme.typography.titleSmall)
-                        if (entry.body.isNotBlank()) Text(entry.body, maxLines = 3,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall)
+                    Column(Modifier.weight(1f)) {
+                        Text(entry.title, style = MaterialTheme.typography.titleSmall, color = androidx.compose.ui.graphics.Color(0xFF202124))
+                        if (entry.body.isNotBlank()) {
+                            Spacer(Modifier.height(3.dp))
+                            Text(entry.body, maxLines = 3, color = androidx.compose.ui.graphics.Color(0xFF686860),
+                                style = MaterialTheme.typography.bodySmall)
+                        }
                         if (entry.kind == "task") {
                             val meta = listOfNotNull(
-                                entry.due?.takeIf { it.isNotBlank() }?.let { "Срок: $it" },
+                                entry.due?.takeIf { it.isNotBlank() }?.let { "Срок: " + it },
                                 when (entry.priority) { "high" -> "Высокий приоритет"; "low" -> "Низкий приоритет"; else -> null }
                             ).joinToString(" · ")
                             if (meta.isNotBlank()) Text(meta, style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary)
+                                color = androidx.compose.ui.graphics.Color(0xFF566B52))
                         }
                     }
-                    TextButton(onClick = { vm.delete(entry) }) { Text("Удалить") }
+                    TextButton(onClick = { vm.delete(entry) }) {
+                        Text("⋯", style = MaterialTheme.typography.titleLarge, color = androidx.compose.ui.graphics.Color(0xFF77766F))
+                    }
                 }
             }
         }
