@@ -86,16 +86,27 @@ public partial class MainWindow : Window
     private async void DriveSettings_Click(object sender, RoutedEventArgs e)
     {
         var oauth = new GoogleOAuthPkceClient();
-        var currentClientId = await oauth.GetConfiguredClientIdAsync();
-        var dialog = new DriveSettingsWindow(currentClientId) { Owner = this };
-        if (dialog.ShowDialog() != true) return;
-
         try
         {
-            await oauth.ConfigureClientIdAsync(dialog.ClientId);
-            MessageBox.Show(
-                "OAuth Client ID сохранён. Следующий шаг — подключение аккаунта и синхронизация с папкой Daybook на Google Drive.",
-                "Daybook · Google Drive", MessageBoxButton.OK, MessageBoxImage.Information);
+            var currentClientId = await oauth.GetConfiguredClientIdAsync();
+            if (string.IsNullOrWhiteSpace(currentClientId))
+            {
+                var dialog = new DriveSettingsWindow(currentClientId) { Owner = this };
+                if (dialog.ShowDialog() != true) return;
+                await oauth.ConfigureClientIdAsync(dialog.ClientId);
+            }
+
+            var accessToken = await oauth.GetAccessTokenAsync();
+            var coordinator = new DriveSyncCoordinator(_store);
+            var outcome = await coordinator.SyncAsync(accessToken);
+            await LoadAsync();
+
+            var details = outcome.Conflicts is { Count: > 0 }
+                ? "\\nЗаписи: " + string.Join(", ", outcome.Conflicts)
+                : "";
+            MessageBox.Show(outcome.Message + details, "Daybook · Google Drive",
+                MessageBoxButton.OK,
+                outcome.Status == "conflict" ? MessageBoxImage.Warning : MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
