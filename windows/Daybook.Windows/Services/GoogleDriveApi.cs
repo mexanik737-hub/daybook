@@ -58,7 +58,7 @@ public sealed class GoogleDriveApi
 
         var first = files[0];
         var id = first.GetProperty("id").GetString()!;
-        var version = first.TryGetProperty("version", out var versionValue) ? versionValue.GetInt64() : 0;
+        var version = first.TryGetProperty("version", out var versionValue) && long.TryParse(versionValue.ToString(), out var parsedVersion) ? parsedVersion : 0;
 
         using var metadataResponse = await SendAsync(
             HttpMethod.Get,
@@ -69,7 +69,7 @@ public sealed class GoogleDriveApi
             await metadataResponse.Content.ReadAsStreamAsync(cancellationToken),
             cancellationToken: cancellationToken);
         if (metadata.RootElement.TryGetProperty("version", out var latestVersion))
-            version = latestVersion.GetInt64();
+            version = long.TryParse(latestVersion.ToString(), out var parsedLatestVersion) ? parsedLatestVersion : version;
 
         return new DriveFile(id, DataFileName, version, metadataResponse.Headers.ETag?.Tag);
     }
@@ -125,7 +125,7 @@ public sealed class GoogleDriveApi
         await EnsureSuccessAsync(response, cancellationToken);
         using var json = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
         var id = json.RootElement.GetProperty("id").GetString()!;
-        var version = json.RootElement.TryGetProperty("version", out var v) ? v.GetInt64() : 0;
+        var version = json.RootElement.TryGetProperty("version", out var v) && long.TryParse(v.ToString(), out var parsedVersion) ? parsedVersion : 0;
         return new DriveFile(id, DataFileName, version, response.Headers.ETag?.Tag);
     }
 
