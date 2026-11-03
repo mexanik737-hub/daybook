@@ -4,27 +4,45 @@
         Title="Daybook" Height="760" Width="1180" MinHeight="600" MinWidth="900"
         Background="{StaticResource WindowBackground}" Foreground="{StaticResource PrimaryText}">
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="250"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
         <Border Grid.Column="0" Background="{StaticResource PanelBackground}" Padding="24">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top">
                     <TextBlock Text="daybook" FontSize="27" FontWeight="SemiBold" Margin="0,0,0,34"/>
-                    <Button Content="⌂   Главная" Height="44" HorizontalContentAlignment="Left" Padding="12,0" Margin="0,0,0,8"/>
-                    <Button Content="☑   Задачи" Height="44" HorizontalContentAlignment="Left" Padding="12,0" Margin="0,0,0,8"/>
-                    <Button Content="▤   Заметки" Height="44" HorizontalContentAlignment="Left" Padding="12,0"/>
+                    <TextBlock Text="НАВИГАЦИЯ" Foreground="{StaticResource MutedText}" Margin="0,0,0,12"/>
+                    <Button Content="＋   Новая задача" Click="AddTask_Click" Height="44" HorizontalContentAlignment="Left" Padding="12,0" Margin="0,0,0,8"/>
+                    <Button Content="＋   Новая заметка" Click="AddNote_Click" Height="44" HorizontalContentAlignment="Left" Padding="12,0"/>
                 </StackPanel>
-                <TextBlock DockPanel.Dock="Bottom" Text="Локальное хранение" Foreground="{StaticResource MutedText}" Margin="0,20,0,0"/>
+                <TextBlock DockPanel.Dock="Bottom" Text="Локальное хранение · офлайн-режим" Foreground="{StaticResource MutedText}" Margin="0,20,0,0" TextWrapping="Wrap"/>
             </DockPanel>
         </Border>
         <Grid Grid.Column="1" Margin="42">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="Всё важное —" FontSize="38" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                <TextBlock Text="в одном месте." FontSize="38" Foreground="{StaticResource Accent}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                <TextBlock Text="Нативная версия Daybook для Windows" Foreground="{StaticResource MutedText}" Margin="0,18,0,0" HorizontalAlignment="Center"/>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+            <StackPanel Margin="0,0,0,22">
+                <TextBlock Text="ТВОЙ ДЕНЬ" Foreground="{StaticResource MutedText}" FontSize="11" FontWeight="SemiBold"/>
+                <TextBlock Text="Всё важное — в одном месте." FontSize="34" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                <TextBlock Text="Задачи и заметки сохраняются на этом компьютере." Foreground="{StaticResource MutedText}" Margin="0,8,0,0"/>
             </StackPanel>
+            <ListBox x:Name="EntryList" Grid.Row="1" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{StaticResource PanelBackground}" CornerRadius="12" Padding="16" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Body}" Foreground="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                    <TextBlock Text="{Binding Due, StringFormat=Срок: {0}}" Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,5,0,0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Content="✓" Tag="{Binding Id}" Click="ToggleDone_Click" Margin="0,0,6,0"/>
+                                    <Button Content="Удалить" Tag="{Binding Id}" Click="Delete_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </Grid>
     </Grid>
 </Window>
