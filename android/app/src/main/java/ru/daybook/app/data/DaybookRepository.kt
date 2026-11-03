@@ -58,8 +58,10 @@ class DaybookRepository(context: Context) {
     }
 
     suspend fun importDocument(document: DaybookDocument) {
+        // Boards are currently Android-local and must survive a notes/tasks Drive import.
+        val localBoards = dao.observeAll().first().filter { it.kind == "board" }
         val rows = document.tasks.map { it.toEntity("task") } +
-            document.notes.map { it.toEntity("note") }
+            document.notes.map { it.toEntity("note") } + localBoards
         dao.replaceAll(rows)
     }
 
