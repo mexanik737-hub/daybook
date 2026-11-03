@@ -23,3 +23,12 @@ data class DaybookEntry(
     val priority: String? = null,
     val done: Boolean? = null
 )
+
+/**
+ * Boards are stored in a separate Drive file so the legacy web client can
+ * continue updating daybook-data.json without dropping board data.
+ */
+@Serializable
+data class BoardSyncDocument(
+    val boards: List<DaybookEntry> = emptyList()
+)
