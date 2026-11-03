@@ -1,0 +1,22 @@
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+*.iml
+
+# .NET
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# IDE
+.idea/
+.vscode/
+
+# Secrets
+*.p12
+*.keystore
+secrets.json
+.env
