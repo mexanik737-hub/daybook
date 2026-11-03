@@ -57,6 +57,27 @@ class DaybookRepository(context: Context) {
         )
     }
 
+    suspend fun exportBoards(): List<DaybookEntry> =
+        dao.observeAll().first().filter { it.kind == "board" }
+            .map { entry ->
+                DaybookEntry(
+                    id = entry.id, title = entry.title, body = entry.body,
+                    created = entry.created, updated = entry.updated
+                )
+            }
+
+    suspend fun importBoards(boards: List<DaybookEntry>) {
+        val all = dao.observeAll().first()
+        val nonBoards = all.filter { it.kind != "board" }
+        val boardRows = boards.map { board ->
+            DaybookEntity(
+                id = board.id, kind = "board", title = board.title, body = board.body,
+                created = board.created, updated = board.updated
+            )
+        }
+        dao.replaceAll(nonBoards + boardRows)
+    }
+
     suspend fun importDocument(document: DaybookDocument) {
         // Boards are currently Android-local and must survive a notes/tasks Drive import.
         val localBoards = dao.observeAll().first().filter { it.kind == "board" }
