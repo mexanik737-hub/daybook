@@ -88,6 +88,9 @@ class GoogleDriveApi(
         accessToken: String,
         expectedEtag: String? = null
     ): DriveFile = withContext(Dispatchers.IO) {
+        if (fileId != null && (expectedEtag.isNullOrBlank() || expectedEtag.startsWith("W/"))) {
+            throw DriveApiException(412, "Google Drive не вернул сильный ETag; обновление остановлено ради защиты от перезаписи.")
+        }
         val metadata = if (fileId == null) {
             """{"name":"daybook-data.json","mimeType":"application/json","parents":["$folderId"]}"""
         } else {
