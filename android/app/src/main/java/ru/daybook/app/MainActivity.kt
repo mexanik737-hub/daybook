@@ -2,6 +2,8 @@ package ru.daybook.app
 
 import android.app.DatePickerDialog
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -42,6 +44,23 @@ class MainActivity : ComponentActivity() {
     private var driveStatus by mutableStateOf("Не подключён")
     private var driveAccessToken by mutableStateOf<String?>(null)
     private lateinit var authorizationLauncher: androidx.activity.result.ActivityResultLauncher<IntentSenderRequest>
+    private val tokenRefreshHandler = Handler(Looper.getMainLooper())
+    private val tokenRefreshRunnable = Runnable {
+        if (driveConnected) authorizeDrive()
+    }
+    private val drivePreferences by lazy {
+        getSharedPreferences("daybook_auth", MODE_PRIVATE)
+    }
+
+    private fun scheduleTokenRefresh() {
+        tokenRefreshHandler.removeCallbacks(tokenRefreshRunnable)
+        tokenRefreshHandler.postDelayed(tokenRefreshRunnable, 45 * 60 * 1000L)
+    }
+
+    override fun onDestroy() {
+        tokenRefreshHandler.removeCallbacks(tokenRefreshRunnable)
+        super.onDestroy()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +74,10 @@ class MainActivity : ComponentActivity() {
                 }.onSuccess { authorizationResult ->
                     driveAccessToken = authorizationResult.accessToken
                     driveConnected = !driveAccessToken.isNullOrBlank()
+                    if (driveConnected) {
+                        drivePreferences.edit().putBoolean("connected", true).apply()
+                        scheduleTokenRefresh()
+                    }
                     driveStatus = if (driveConnected) "Google Drive подключён" else "Не удалось получить токен"
                 }.onFailure { error ->
                     driveConnected = false
@@ -62,6 +85,7 @@ class MainActivity : ComponentActivity() {
                 }
             } else {
                 driveConnected = false
+                drivePreferences.edit().putBoolean("connected", false).apply()
                 driveStatus = "Авторизация отменена"
             }
         }
@@ -76,6 +100,7 @@ class MainActivity : ComponentActivity() {
             })
             DaybookApp(vm, driveConnected, driveStatus, driveAccessToken, ::authorizeDrive)
         }
+        if (drivePreferences.getBoolean("connected", false)) authorizeDrive()
     }
 
     private fun authorizeDrive() {
@@ -101,6 +126,10 @@ class MainActivity : ComponentActivity() {
                 } else {
                     driveAccessToken = result.accessToken
                     driveConnected = !driveAccessToken.isNullOrBlank()
+                    if (driveConnected) {
+                        drivePreferences.edit().putBoolean("connected", true).apply()
+                        scheduleTokenRefresh()
+                    }
                     driveStatus = if (driveConnected) "Google Drive подключён" else "Не удалось получить токен"
                 }
             }
