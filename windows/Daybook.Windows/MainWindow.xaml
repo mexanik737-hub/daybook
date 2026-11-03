@@ -38,9 +38,21 @@
                                     <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"/>
                                     <TextBlock Text="{Binding Body}" Foreground="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,5,0,0"/>
                                     <TextBlock Text="{Binding Due, StringFormat=Срок: {0}}" Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,5,0,0"/>
+                                    <TextBlock Text="{Binding Priority, StringFormat=Приоритет: {0}}" Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,3,0,0"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Content="✓" Tag="{Binding Id}" Click="ToggleDone_Click" Margin="0,0,6,0"/>
+                                    <Button Content="✓" Tag="{Binding Id}" Click="ToggleDone_Click" Margin="0,0,6,0">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsTask}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                     <Button Content="Удалить" Tag="{Binding Id}" Click="Delete_Click"/>
                                 </StackPanel>
                             </Grid>
