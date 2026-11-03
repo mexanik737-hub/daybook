@@ -94,17 +94,40 @@ public partial class MainWindow : Window
 
     private Task PersistAsync() => _store.SaveAsync(_document);
 
-    private async void AddTask_Click(object sender, RoutedEventArgs e) => await AddEntryAsync(true);
-    private async void AddNote_Click(object sender, RoutedEventArgs e) => await AddEntryAsync(false);
+    private async void AddTask_Click(object sender, RoutedEventArgs e) => await EditEntryAsync(true);
+    private async void AddNote_Click(object sender, RoutedEventArgs e) => await EditEntryAsync(false);
 
-    private async Task AddEntryAsync(bool task)
+    private async Task EditEntryAsync(bool isTask, DaybookEntry? entry = null)
     {
-        var title = Microsoft.VisualBasic.Interaction.InputBox("Название:", task ? "Новая задача" : "Новая заметка");
-        if (string.IsNullOrWhiteSpace(title)) return;
-        var body = Microsoft.VisualBasic.Interaction.InputBox("Текст (необязательно):", "Daybook");
+        var dialog = new EntryEditorWindow(isTask, entry) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var entry = new DaybookEntry { Title = title.Trim(), Body = body, Created = now, Updated = now };
-        (task ? _document.Tasks : _document.Notes).Insert(0, entry);
+        if (entry is null)
+        {
+            entry = new DaybookEntry
+            {
+                Created = now,
+                Updated = now,
+                Title = dialog.EntryTitle,
+                Body = dialog.EntryBody,
+                Due = isTask ? dialog.EntryDue : null,
+                Priority = isTask ? dialog.EntryPriority : null
+            };
+            (isTask ? _document.Tasks : _document.Notes).Insert(0, entry);
+        }
+        else
+        {
+            entry.Title = dialog.EntryTitle;
+            entry.Body = dialog.EntryBody;
+            entry.Updated = now;
+            if (isTask)
+            {
+                entry.Due = dialog.EntryDue;
+                entry.Priority = dialog.EntryPriority;
+            }
+        }
+
         await PersistAsync();
         Refresh();
     }
@@ -112,14 +135,7 @@ public partial class MainWindow : Window
     private async void EntryList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (EntryList.SelectedItem is not DaybookEntry item) return;
-        var title = Microsoft.VisualBasic.Interaction.InputBox("Название:", "Изменить запись", item.Title);
-        if (string.IsNullOrWhiteSpace(title)) return;
-        var body = Microsoft.VisualBasic.Interaction.InputBox("Текст:", "Изменить запись", item.Body);
-        item.Title = title.Trim();
-        item.Body = body;
-        item.Updated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        await PersistAsync();
-        Refresh();
+        await EditEntryAsync(item.IsTask, item);
     }
 
     private async void Delete_Click(object sender, RoutedEventArgs e)
