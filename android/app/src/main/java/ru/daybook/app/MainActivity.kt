@@ -26,16 +26,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import ru.daybook.app.data.DaybookEntity
 import ru.daybook.app.data.DaybookRepository
+import ru.daybook.app.data.DaybookSyncStateStore
+import ru.daybook.app.data.DaybookDriveSyncCoordinator
 
 class MainActivity : ComponentActivity() {
     private var driveConnected by mutableStateOf(false)
     private var driveStatus by mutableStateOf("Не подключён")
-    private var driveAccessToken: String? = null
+    private var driveAccessToken by mutableStateOf<String?>(null)
     private lateinit var authorizationLauncher: androidx.activity.result.ActivityResultLauncher<IntentSenderRequest>
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,13 +65,14 @@ class MainActivity : ComponentActivity() {
         }
 
         val repository = DaybookRepository(this)
+        val syncCoordinator = DaybookDriveSyncCoordinator(repository, DaybookSyncStateStore(this))
         setContent {
             val vm: DaybookViewModel = viewModel(factory = object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    DaybookViewModel(repository) as T
+                    DaybookViewModel(repository, syncCoordinator) as T
             })
-            DaybookApp(vm, driveConnected, driveStatus, ::authorizeDrive)
+            DaybookApp(vm, driveConnected, driveStatus, driveAccessToken, ::authorizeDrive)
         }
     }
 
@@ -102,7 +106,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-class DaybookViewModel(private val repository: DaybookRepository) : ViewModel() {
+class DaybookViewModel(
+    private val repository: DaybookRepository,
+    private val syncCoordinator: DaybookDriveSyncCoordinator
+) : ViewModel() {
+    val syncStatus = MutableStateFlow("Локально")
     val entries = repository.observeAll().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList()
     )
@@ -114,14 +122,26 @@ class DaybookViewModel(private val repository: DaybookRepository) : ViewModel() 
         repository.save(id = id, kind = kind, title = title, body = body, due = due, priority = priority)
     }
 
+    fun sync(accessToken: String) = viewModelScope.launch {
+        syncStatus.value = "Синхронизация с Google Drive…"
+        try {
+            val result = syncCoordinator.sync(accessToken)
+            syncStatus.value = result.message
+        } catch (error: Exception) {
+            syncStatus.value = error.message ?: "Ошибка синхронизации"
+        }
+    }
+
     fun toggle(entry: DaybookEntity) = viewModelScope.launch { repository.toggleDone(entry) }
     fun delete(entry: DaybookEntity) = viewModelScope.launch { repository.delete(entry.id) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatus: String, onConnectDrive: () -> Unit) {
+private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatus: String, accessToken: String?, onConnectDrive: () -> Unit) {
     val entries by vm.entries.collectAsState()
+    val syncStatus by vm.syncStatus.collectAsState()
+    LaunchedEffect(accessToken) { if (accessToken != null) vm.sync(accessToken) }
     val context = LocalContext.current
     var section by remember { mutableStateOf("home") }
     var taskFilter by remember { mutableStateOf("all") }
@@ -169,8 +189,9 @@ private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatu
                     title = { Text("daybook") },
                     actions = {
                         Column(horizontalAlignment = Alignment.End) {
-                            TextButton(onClick = onConnectDrive) { Text(if (driveConnected) "Drive ✓" else "Подключить Drive") }
-                            Text(driveStatus, style = MaterialTheme.typography.labelSmall,
+                            TextButton(onClick = onConnectDrive) { Text(if (driveConnected) "Drive ✓ · синхр." else "Подключить Drive") }
+                            Text(if (driveConnected) syncStatus else driveStatus,
+                                style = MaterialTheme.typography.labelSmall,
                                 modifier = Modifier.padding(end = 12.dp))
                         }
                     }
