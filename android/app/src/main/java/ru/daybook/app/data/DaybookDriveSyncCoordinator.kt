@@ -1,5 +1,8 @@
 package ru.daybook.app.data
 
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+
 class DaybookDriveSyncCoordinator(
     private val repository: DaybookRepository,
     private val stateStore: DaybookSyncStateStore,
@@ -200,7 +203,8 @@ class DaybookDriveSyncCoordinator(
     }
 
     private fun decodeBoards(json: String): BoardSyncDocument =
-        DaybookJson.format.decodeFromString(json)
+        DaybookJson.format.decodeFromString<BoardSyncDocument>(json)
+            .let { it.copy(boards = it.boards.sortedBy { board -> board.id }) }
 
     private fun encodeBoards(document: BoardSyncDocument): String =
         DaybookJson.format.encodeToString(document)
