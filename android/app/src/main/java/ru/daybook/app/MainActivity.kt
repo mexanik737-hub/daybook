@@ -247,10 +247,10 @@ private fun DaybookApp(
     var priority by remember { mutableStateOf("normal") }
     var priorityMenu by remember { mutableStateOf(false) }
 
-    val ink = androidx.compose.ui.graphics.Color(0xFF202124)
-    val muted = androidx.compose.ui.graphics.Color(0xFF77766F)
-    val canvas = androidx.compose.ui.graphics.Color(0xFFF7F6F2)
-    val accent = androidx.compose.ui.graphics.Color(0xFF566B52)
+    val ink = androidx.compose.ui.graphics.Color(0xFFE8E7E3)
+    val muted = androidx.compose.ui.graphics.Color(0xFFA7A69F)
+    val canvas = androidx.compose.ui.graphics.Color(0xFF141512)
+    val accent = androidx.compose.ui.graphics.Color(0xFFA9BE9B)
     val tasks = entries.filter { it.kind == "task" }
     val notes = entries.filter { it.kind == "note" }
     val query = search.trim().lowercase()
@@ -271,16 +271,16 @@ private fun DaybookApp(
         priority = entry?.priority ?: "normal"
     }
 
-    MaterialTheme(colorScheme = lightColorScheme(
+    MaterialTheme(colorScheme = darkColorScheme(
         primary = accent,
         onPrimary = androidx.compose.ui.graphics.Color.White,
         background = canvas,
         onBackground = ink,
-        surface = androidx.compose.ui.graphics.Color(0xFFFFFEFB),
+        surface = androidx.compose.ui.graphics.Color(0xFF20221E),
         onSurface = ink,
-        surfaceVariant = androidx.compose.ui.graphics.Color(0xFFECEAE3),
+        surfaceVariant = androidx.compose.ui.graphics.Color(0xFF2A2D28),
         onSurfaceVariant = muted,
-        secondary = androidx.compose.ui.graphics.Color(0xFFB8C5A9)
+        secondary = androidx.compose.ui.graphics.Color(0xFFB6C9A9)
     )) {
         Scaffold(
             containerColor = canvas,
@@ -296,7 +296,7 @@ private fun DaybookApp(
             },
             bottomBar = {
                 NavigationBar(
-                    containerColor = androidx.compose.ui.graphics.Color(0xFFFFFEFB),
+                    containerColor = androidx.compose.ui.graphics.Color(0xFF20221E),
                     contentColor = accent,
                     tonalElevation = 0.dp
                 ) {
@@ -314,7 +314,7 @@ private fun DaybookApp(
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = accent,
                                 selectedTextColor = accent,
-                                indicatorColor = androidx.compose.ui.graphics.Color(0xFFE5EBDD),
+                                indicatorColor = androidx.compose.ui.graphics.Color(0xFF384536),
                                 unselectedIconColor = muted,
                                 unselectedTextColor = muted
                             )
@@ -346,7 +346,7 @@ private fun DaybookApp(
                     }
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = if (driveConnected) androidx.compose.ui.graphics.Color(0xFFE5EBDD) else androidx.compose.ui.graphics.Color(0xFFECEAE3),
+                        color = if (driveConnected) androidx.compose.ui.graphics.Color(0xFF384536) else androidx.compose.ui.graphics.Color(0xFF2A2D28),
                         modifier = Modifier.clickable(onClick = onConnectDrive)
                     ) {
                         Row(
@@ -376,9 +376,9 @@ private fun DaybookApp(
                     Spacer(Modifier.height(22.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         SummaryTile("Задачи", tasks.count { !it.done }.toString(), "осталось сделать",
-                            androidx.compose.ui.graphics.Color(0xFFE8EDE2), Modifier.weight(1f)) { section = "tasks" }
+                            androidx.compose.ui.graphics.Color(0xFF303A2D), Modifier.weight(1f)) { section = "tasks" }
                         SummaryTile("Заметки", notes.size.toString(), "сохранено мыслей",
-                            androidx.compose.ui.graphics.Color(0xFFF0E9DC), Modifier.weight(1f)) { section = "notes" }
+                            androidx.compose.ui.graphics.Color(0xFF3A3429), Modifier.weight(1f)) { section = "notes" }
                     }
                     Spacer(Modifier.height(24.dp))
                     SectionHeading("На сегодня", "Все задачи") { section = "tasks" }
@@ -402,7 +402,7 @@ private fun DaybookApp(
                                     label = { Text(label) },
                                     shape = RoundedCornerShape(50),
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = androidx.compose.ui.graphics.Color(0xFFE5EBDD),
+                                        selectedContainerColor = androidx.compose.ui.graphics.Color(0xFF384536),
                                         selectedLabelColor = accent
                                     )
                                 )
@@ -424,7 +424,7 @@ private fun DaybookApp(
         if (editorKind != null) {
             AlertDialog(
                 onDismissRequest = { editorKind = null },
-                containerColor = androidx.compose.ui.graphics.Color(0xFFFFFEFB),
+                containerColor = androidx.compose.ui.graphics.Color(0xFF20221E),
                 title = {
                     Text(if (editingId == null) {
                         if (editorKind == "task") "Новая задача" else "Новая заметка"
@@ -492,7 +492,7 @@ private fun DaybookApp(
                         if (editingId != null) TextButton(onClick = {
                             entries.firstOrNull { it.id == editingId }?.let(vm::delete)
                             editorKind = null
-                        }) { Text("Удалить", color = androidx.compose.ui.graphics.Color(0xFFB34C42)) }
+                        }) { Text("Удалить", color = androidx.compose.ui.graphics.Color(0xFFE58D82)) }
                         TextButton(onClick = { editorKind = null }) { Text("Отмена", color = muted) }
                     }
                 }
@@ -512,9 +512,9 @@ private fun DaybookSearchField(value: String, onValueChange: (String) -> Unit) {
         leadingIcon = { Text("⌕", style = MaterialTheme.typography.titleLarge) },
         shape = RoundedCornerShape(16.dp),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = androidx.compose.ui.graphics.Color(0xFFECEAE3),
-            unfocusedContainerColor = androidx.compose.ui.graphics.Color(0xFFECEAE3),
-            disabledContainerColor = androidx.compose.ui.graphics.Color(0xFFECEAE3),
+            focusedContainerColor = androidx.compose.ui.graphics.Color(0xFF2A2D28),
+            unfocusedContainerColor = androidx.compose.ui.graphics.Color(0xFF2A2D28),
+            disabledContainerColor = androidx.compose.ui.graphics.Color(0xFF2A2D28),
             focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
             unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
         )
@@ -530,10 +530,10 @@ private fun SummaryTile(
 ) {
     Surface(modifier = modifier.clickable(onClick = onClick), color = color, shape = RoundedCornerShape(20.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.labelLarge, color = androidx.compose.ui.graphics.Color(0xFF55564F))
+            Text(title, style = MaterialTheme.typography.labelLarge, color = androidx.compose.ui.graphics.Color(0xFFC5C5BC))
             Spacer(Modifier.height(8.dp))
-            Text(value, style = MaterialTheme.typography.headlineLarge, color = androidx.compose.ui.graphics.Color(0xFF202124))
-            Text(caption, style = MaterialTheme.typography.labelSmall, color = androidx.compose.ui.graphics.Color(0xFF77766F))
+            Text(value, style = MaterialTheme.typography.headlineLarge, color = androidx.compose.ui.graphics.Color(0xFFE8E7E3))
+            Text(caption, style = MaterialTheme.typography.labelSmall, color = androidx.compose.ui.graphics.Color(0xFFA7A69F))
         }
     }
 }
@@ -542,8 +542,8 @@ private fun SummaryTile(
 private fun SectionHeading(title: String, action: String, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = androidx.compose.ui.graphics.Color(0xFF202124))
-        TextButton(onClick = onClick) { Text(action, color = androidx.compose.ui.graphics.Color(0xFF566B52)) }
+        Text(title, style = MaterialTheme.typography.titleLarge, color = androidx.compose.ui.graphics.Color(0xFFE8E7E3))
+        TextButton(onClick = onClick) { Text(action, color = androidx.compose.ui.graphics.Color(0xFFA9BE9B)) }
     }
 }
 
@@ -551,13 +551,13 @@ private fun SectionHeading(title: String, action: String, onClick: () -> Unit) {
 private fun DaybookEmpty(title: String, subtitle: String) {
     Surface(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        color = androidx.compose.ui.graphics.Color(0xFFECEAE3),
+        color = androidx.compose.ui.graphics.Color(0xFF2A2D28),
         shape = RoundedCornerShape(18.dp)
     ) {
         Column(Modifier.padding(18.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = androidx.compose.ui.graphics.Color(0xFF30312D))
+            Text(title, style = MaterialTheme.typography.titleMedium, color = androidx.compose.ui.graphics.Color(0xFFE2E2DA))
             Spacer(Modifier.height(4.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = androidx.compose.ui.graphics.Color(0xFF77766F))
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = androidx.compose.ui.graphics.Color(0xFFA7A69F))
         }
     }
 }
@@ -572,31 +572,31 @@ private fun EntryList(
     LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items(items, key = { it.id }) { entry ->
             val noteColors = listOf(
-                androidx.compose.ui.graphics.Color(0xFFF0E9DC),
-                androidx.compose.ui.graphics.Color(0xFFE8EDE2),
-                androidx.compose.ui.graphics.Color(0xFFE8EBF1),
-                androidx.compose.ui.graphics.Color(0xFFF1E6E3)
+                androidx.compose.ui.graphics.Color(0xFF3A3429),
+                androidx.compose.ui.graphics.Color(0xFF303A2D),
+                androidx.compose.ui.graphics.Color(0xFF2D3440),
+                androidx.compose.ui.graphics.Color(0xFF3A2D2C)
             )
             val cardColor = if (entry.kind == "note") noteColors[kotlin.math.abs(entry.id.hashCode()) % noteColors.size]
-                else androidx.compose.ui.graphics.Color(0xFFFFFEFB)
+                else androidx.compose.ui.graphics.Color(0xFF20221E)
             Card(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = cardColor),
-                border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0x12000000)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0x30FFFFFF)),
                 modifier = Modifier.fillMaxWidth().clickable { onEdit(entry.kind, entry) }
             ) {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (entry.kind == "task") {
                         Checkbox(checked = entry.done, onCheckedChange = { vm.toggle(entry) },
-                            colors = CheckboxDefaults.colors(checkedColor = androidx.compose.ui.graphics.Color(0xFF566B52)))
+                            colors = CheckboxDefaults.colors(checkedColor = androidx.compose.ui.graphics.Color(0xFFA9BE9B)))
                     } else {
-                        Text("✦", modifier = Modifier.padding(horizontal = 8.dp), color = androidx.compose.ui.graphics.Color(0xFF8B806B))
+                        Text("✦", modifier = Modifier.padding(horizontal = 8.dp), color = androidx.compose.ui.graphics.Color(0xFFC4B18E))
                     }
                     Column(Modifier.weight(1f)) {
-                        Text(entry.title, style = MaterialTheme.typography.titleSmall, color = androidx.compose.ui.graphics.Color(0xFF202124))
+                        Text(entry.title, style = MaterialTheme.typography.titleSmall, color = androidx.compose.ui.graphics.Color(0xFFE8E7E3))
                         if (entry.body.isNotBlank()) {
                             Spacer(Modifier.height(3.dp))
-                            Text(entry.body, maxLines = 3, color = androidx.compose.ui.graphics.Color(0xFF686860),
+                            Text(entry.body, maxLines = 3, color = androidx.compose.ui.graphics.Color(0xFFB8B8AF),
                                 style = MaterialTheme.typography.bodySmall)
                         }
                         if (entry.kind == "task") {
@@ -605,11 +605,11 @@ private fun EntryList(
                                 when (entry.priority) { "high" -> "Высокий приоритет"; "low" -> "Низкий приоритет"; else -> null }
                             ).joinToString(" · ")
                             if (meta.isNotBlank()) Text(meta, style = MaterialTheme.typography.labelSmall,
-                                color = androidx.compose.ui.graphics.Color(0xFF566B52))
+                                color = androidx.compose.ui.graphics.Color(0xFFA9BE9B))
                         }
                     }
                     TextButton(onClick = { vm.delete(entry) }) {
-                        Text("⋯", style = MaterialTheme.typography.titleLarge, color = androidx.compose.ui.graphics.Color(0xFF77766F))
+                        Text("⋯", style = MaterialTheme.typography.titleLarge, color = androidx.compose.ui.graphics.Color(0xFFA7A69F))
                     }
                 }
             }
