@@ -57,6 +57,19 @@ public partial class MainWindow : Window
         Refresh();
     }
 
+    private async void EntryList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (EntryList.SelectedItem is not DaybookEntry item) return;
+        var title = Microsoft.VisualBasic.Interaction.InputBox("Название:", "Изменить запись", item.Title);
+        if (string.IsNullOrWhiteSpace(title)) return;
+        var body = Microsoft.VisualBasic.Interaction.InputBox("Текст:", "Изменить запись", item.Body);
+        item.Title = title.Trim();
+        item.Body = body;
+        item.Updated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        await PersistAsync();
+        Refresh();
+    }
+
     private async void Delete_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.Tag is not string id) return;
