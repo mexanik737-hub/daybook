@@ -1,0 +1,30 @@
+<Window x:Class="Daybook.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Daybook" Height="760" Width="1180" MinHeight="600" MinWidth="900"
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource PrimaryText}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="{StaticResource PanelBackground}" Padding="24">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top">
+                    <TextBlock Text="daybook" FontSize="27" FontWeight="SemiBold" Margin="0,0,0,34"/>
+                    <Button Content="⌂   Главная" Height="44" HorizontalContentAlignment="Left" Padding="12,0" Margin="0,0,0,8"/>
+                    <Button Content="☑   Задачи" Height="44" HorizontalContentAlignment="Left" Padding="12,0" Margin="0,0,0,8"/>
+                    <Button Content="▤   Заметки" Height="44" HorizontalContentAlignment="Left" Padding="12,0"/>
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Bottom" Text="Локальное хранение" Foreground="{StaticResource MutedText}" Margin="0,20,0,0"/>
+            </DockPanel>
+        </Border>
+        <Grid Grid.Column="1" Margin="42">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Всё важное —" FontSize="38" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                <TextBlock Text="в одном месте." FontSize="38" Foreground="{StaticResource Accent}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                <TextBlock Text="Нативная версия Daybook для Windows" Foreground="{StaticResource MutedText}" Margin="0,18,0,0" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
