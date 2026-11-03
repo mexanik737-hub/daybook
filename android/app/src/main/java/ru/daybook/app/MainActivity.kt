@@ -9,6 +9,13 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -242,15 +249,16 @@ private fun DaybookApp(
     var editorKind by remember { mutableStateOf<String?>(null) }
     var editingId by remember { mutableStateOf<String?>(null) }
     var title by remember { mutableStateOf("") }
-    var body by remember { mutableStateOf("") }
+    var bodyValue by remember { mutableStateOf(TextFieldValue("")) }
     var due by remember { mutableStateOf("") }
     var priority by remember { mutableStateOf("normal") }
     var priorityMenu by remember { mutableStateOf(false) }
 
     val ink = androidx.compose.ui.graphics.Color(0xFFE8E7E3)
     val muted = androidx.compose.ui.graphics.Color(0xFFA7A69F)
-    val canvas = androidx.compose.ui.graphics.Color(0xFF141512)
-    val accent = androidx.compose.ui.graphics.Color(0xFFA9BE9B)
+    val canvas = androidx.compose.ui.graphics.Color(0xFF111019)
+    val accent = androidx.compose.ui.graphics.Color(0xFFB69CFF)
+    val purpleDeep = androidx.compose.ui.graphics.Color(0xFF7047D8)
     val tasks = entries.filter { it.kind == "task" }
     val notes = entries.filter { it.kind == "note" }
     val query = search.trim().lowercase()
@@ -266,7 +274,7 @@ private fun DaybookApp(
         editorKind = kind
         editingId = entry?.id
         title = entry?.title.orEmpty()
-        body = entry?.body.orEmpty()
+        bodyValue = TextFieldValue(entry?.body.orEmpty())
         due = entry?.due.orEmpty()
         priority = entry?.priority ?: "normal"
     }
@@ -276,18 +284,18 @@ private fun DaybookApp(
         onPrimary = androidx.compose.ui.graphics.Color.White,
         background = canvas,
         onBackground = ink,
-        surface = androidx.compose.ui.graphics.Color(0xFF20221E),
+        surface = androidx.compose.ui.graphics.Color(0xFF1B1825),
         onSurface = ink,
-        surfaceVariant = androidx.compose.ui.graphics.Color(0xFF2A2D28),
+        surfaceVariant = androidx.compose.ui.graphics.Color(0xFF292438),
         onSurfaceVariant = muted,
-        secondary = androidx.compose.ui.graphics.Color(0xFFB6C9A9)
+        secondary = androidx.compose.ui.graphics.Color(0xFFD0C1FF)
     )) {
         Scaffold(
             containerColor = canvas,
             floatingActionButton = {
                 ExtendedFloatingActionButton(
                     onClick = { openEditor(if (section == "tasks") "task" else "note") },
-                    containerColor = accent,
+                    containerColor = purpleDeep,
                     contentColor = androidx.compose.ui.graphics.Color.White,
                     shape = RoundedCornerShape(18.dp),
                     icon = { Text("+", style = MaterialTheme.typography.titleLarge) },
@@ -296,17 +304,17 @@ private fun DaybookApp(
             },
             bottomBar = {
                 NavigationBar(
-                    containerColor = androidx.compose.ui.graphics.Color(0xFF20221E),
+                    containerColor = androidx.compose.ui.graphics.Color(0xFF1B1825),
                     contentColor = accent,
                     tonalElevation = 0.dp
                 ) {
-                    listOf("home" to "Обзор", "tasks" to "Задачи", "notes" to "Заметки").forEach { (key, label) ->
+                    listOf("home" to "Обзор", "tasks" to "Задачи", "notes" to "Заметки", "boards" to "Схемы").forEach { (key, label) ->
                         NavigationBarItem(
                             selected = section == key,
                             onClick = { section = key },
                             icon = {
                                 Text(
-                                    when (key) { "home" -> "⌂"; "tasks" -> "✓"; else -> "▤" },
+                                    when (key) { "home" -> "⌂"; "tasks" -> "✓"; "notes" -> "▤"; else -> "◇" },
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             },
@@ -314,7 +322,7 @@ private fun DaybookApp(
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = accent,
                                 selectedTextColor = accent,
-                                indicatorColor = androidx.compose.ui.graphics.Color(0xFF384536),
+                                indicatorColor = androidx.compose.ui.graphics.Color(0xFF382C55),
                                 unselectedIconColor = muted,
                                 unselectedTextColor = muted
                             )
@@ -332,12 +340,13 @@ private fun DaybookApp(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text(
-                            "DAYBOOK",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = accent,
-                            letterSpacing = androidx.compose.ui.unit.TextUnit(2f, androidx.compose.ui.unit.TextUnitType.Sp)
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(Modifier.size(34.dp).background(Brush.linearGradient(listOf(purpleDeep, accent)), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+                                Text("D", color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.titleLarge)
+                            }
+                            Text("DAYBOOK", style = MaterialTheme.typography.labelSmall, color = accent,
+                                letterSpacing = androidx.compose.ui.unit.TextUnit(2f, androidx.compose.ui.unit.TextUnitType.Sp))
+                        }
                         Text(
                             when (section) { "tasks" -> "Мои задачи"; "notes" -> "Мои заметки"; else -> "Моё пространство" },
                             style = MaterialTheme.typography.headlineSmall,
@@ -390,7 +399,7 @@ private fun DaybookApp(
                     val homeNotes = notes.sortedByDescending { it.updated }.take(2)
                     if (homeNotes.isEmpty()) DaybookEmpty("Здесь будет твоя библиотека", "Сохраняй идеи, планы и важные мысли.")
                     else EntryList(homeNotes, vm, ::openEditor, Modifier.heightIn(max = 145.dp))
-                } else {
+                } else if (section == "notes") {
                     DaybookSearchField(search, { search = it })
                     Spacer(Modifier.height(14.dp))
                     if (section == "tasks") {
@@ -417,59 +426,74 @@ private fun DaybookApp(
                         if (filteredNotes.isEmpty()) DaybookEmpty("Заметок пока нет", "Нажми «Новая заметка», чтобы записать мысль.")
                         else EntryList(filteredNotes, vm, ::openEditor, Modifier.weight(1f))
                     }
+                } else {
+                    Text("Визуальные схемы", style = MaterialTheme.typography.titleLarge, color = ink)
+                    Spacer(Modifier.height(8.dp))
+                    DaybookEmpty("Рабочее поле готовится", "Здесь появятся блоки, фигуры и связи между идеями. Сейчас мы сначала обновляем редактор и навигацию.")
                 }
             }
         }
 
         if (editorKind != null) {
-            AlertDialog(
-                onDismissRequest = { editorKind = null },
-                containerColor = androidx.compose.ui.graphics.Color(0xFF20221E),
-                title = {
-                    Text(if (editingId == null) {
-                        if (editorKind == "task") "Новая задача" else "Новая заметка"
-                    } else {
-                        if (editorKind == "task") "Редактировать задачу" else "Редактировать заметку"
-                    })
-                },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedTextField(value = title, onValueChange = { title = it },
-                            label = { Text("Название") }, singleLine = true, shape = RoundedCornerShape(14.dp))
-                        OutlinedTextField(value = body, onValueChange = { body = it },
-                            label = { Text("Текст") }, minLines = 3, shape = RoundedCornerShape(14.dp))
+            Dialog(onDismissRequest = { editorKind = null }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+                Surface(modifier = Modifier.fillMaxSize(), color = canvas, shape = RoundedCornerShape(0.dp)) {
+                    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 14.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(onClick = { editorKind = null }) { Text("Закрыть", color = muted) }
+                            Text(if (editorKind == "task") "Задача" else "Заметка", style = MaterialTheme.typography.titleMedium, color = ink)
+                            TextButton(onClick = {
+                                if (title.isNotBlank() || bodyValue.text.isNotBlank()) vm.save(editingId, editorKind!!, title, bodyValue.text, due.takeIf { it.isNotBlank() }, priority)
+                                editorKind = null
+                            }) { Text("Готово", color = accent) }
+                        }
+                        Spacer(Modifier.height(18.dp))
+                        OutlinedTextField(value = title, onValueChange = { title = it }, modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(if (editorKind == "task") "Название задачи" else "Заголовок") },
+                            textStyle = MaterialTheme.typography.headlineSmall.copy(color = ink), singleLine = true, shape = RoundedCornerShape(14.dp))
+                        if (editorKind == "note") {
+                            Spacer(Modifier.height(10.dp))
+                            Row(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Color(0xFF211C30), RoundedCornerShape(14.dp)).padding(5.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly) {
+                                @Composable fun FormatButton(label: String, prefix: String, suffix: String = prefix) {
+                                    TextButton(onClick = {
+                                        val startIndex = bodyValue.selection.min.coerceIn(0, bodyValue.text.length)
+                                        val endIndex = bodyValue.selection.max.coerceIn(startIndex, bodyValue.text.length)
+                                        val selected = bodyValue.text.substring(startIndex, endIndex).ifEmpty { "текст" }
+                                        val inserted = prefix + selected + suffix
+                                        val updated = bodyValue.text.replaceRange(startIndex, endIndex, inserted)
+                                        bodyValue = TextFieldValue(updated, TextRange(startIndex + inserted.length))
+                                    }) { Text(label, color = accent, style = MaterialTheme.typography.labelLarge) }
+                                }
+                                FormatButton("B", "**")
+                                FormatButton("I", "_")
+                                FormatButton("H", "## ", "")
+                                FormatButton("•", "- ", "")
+                                FormatButton("☑", "- [ ] ", "")
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(value = bodyValue, onValueChange = { bodyValue = it }, modifier = Modifier.fillMaxWidth().weight(1f),
+                            placeholder = { Text(if (editorKind == "task") "Описание и детали…" else "Начни записывать свою мысль…") },
+                            shape = RoundedCornerShape(16.dp), minLines = 8, textStyle = MaterialTheme.typography.bodyLarge.copy(color = ink))
                         if (editorKind == "task") {
+                            Spacer(Modifier.height(12.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedTextField(
-                                    value = due, onValueChange = {}, readOnly = true,
-                                    label = { Text("Срок") }, placeholder = { Text("Не задан") },
-                                    modifier = Modifier.weight(1f), singleLine = true,
-                                    shape = RoundedCornerShape(14.dp)
-                                )
+                                OutlinedTextField(value = due, onValueChange = {}, readOnly = true, label = { Text("Срок") },
+                                    placeholder = { Text("Не задан") }, modifier = Modifier.weight(1f), singleLine = true)
                                 TextButton(onClick = {
                                     val calendar = Calendar.getInstance()
                                     val parts = due.split("-")
-                                    if (parts.size == 3) runCatching {
-                                        calendar.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
-                                    }
-                                    DatePickerDialog(context, { _, year, month, day ->
-                                        due = String.format(Locale.ROOT, "%04d-%02d-%02d", year, month + 1, day)
-                                    }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH),
-                                        calendar.get(Calendar.DAY_OF_MONTH)).show()
-                                }) { Text("Выбрать") }
-                                if (due.isNotBlank()) TextButton(onClick = { due = "" }) { Text("×") }
+                                    if (parts.size == 3) runCatching { calendar.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt()) }
+                                    DatePickerDialog(context, { _, year, month, day -> due = String.format(Locale.ROOT, "%04d-%02d-%02d", year, month + 1, day) },
+                                        calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+                                }) { Text("Дата", color = accent) }
+                                if (due.isNotBlank()) TextButton(onClick = { due = "" }) { Text("×", color = muted) }
                             }
-                            ExposedDropdownMenuBox(
-                                expanded = priorityMenu,
-                                onExpandedChange = { priorityMenu = !priorityMenu }
-                            ) {
-                                OutlinedTextField(
-                                    value = when (priority) { "high" -> "Высокий"; "low" -> "Низкий"; else -> "Обычный" },
+                            ExposedDropdownMenuBox(expanded = priorityMenu, onExpandedChange = { priorityMenu = !priorityMenu }) {
+                                OutlinedTextField(value = when (priority) { "high" -> "Высокий"; "low" -> "Низкий"; else -> "Обычный" },
                                     onValueChange = {}, readOnly = true, label = { Text("Приоритет") },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = priorityMenu) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                    shape = RoundedCornerShape(14.dp)
-                                )
+                                    modifier = Modifier.menuAnchor().fillMaxWidth(), shape = RoundedCornerShape(14.dp))
                                 ExposedDropdownMenu(expanded = priorityMenu, onDismissRequest = { priorityMenu = false }) {
                                     listOf("normal" to "Обычный", "high" to "Высокий", "low" to "Низкий").forEach { (key, label) ->
                                         DropdownMenuItem(text = { Text(label) }, onClick = { priority = key; priorityMenu = false })
@@ -477,26 +501,12 @@ private fun DaybookApp(
                                 }
                             }
                         }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        if (title.isNotBlank() || body.isNotBlank()) {
-                            vm.save(editingId, editorKind!!, title, body, due.takeIf { it.isNotBlank() }, priority)
-                            editorKind = null
+                        if (editingId != null) TextButton(onClick = { entries.firstOrNull { it.id == editingId }?.let(vm::delete); editorKind = null }) {
+                            Text("Удалить запись", color = androidx.compose.ui.graphics.Color(0xFFE58D9B))
                         }
-                    }) { Text("Сохранить", color = accent) }
-                },
-                dismissButton = {
-                    Row {
-                        if (editingId != null) TextButton(onClick = {
-                            entries.firstOrNull { it.id == editingId }?.let(vm::delete)
-                            editorKind = null
-                        }) { Text("Удалить", color = androidx.compose.ui.graphics.Color(0xFFE58D82)) }
-                        TextButton(onClick = { editorKind = null }) { Text("Отмена", color = muted) }
                     }
                 }
-            )
+            }
         }
     }
 }
@@ -593,7 +603,7 @@ private fun EntryList(
                         Text("✦", modifier = Modifier.padding(horizontal = 8.dp), color = androidx.compose.ui.graphics.Color(0xFFC4B18E))
                     }
                     Column(Modifier.weight(1f)) {
-                        Text(entry.title, style = MaterialTheme.typography.titleSmall, color = androidx.compose.ui.graphics.Color(0xFFE8E7E3))
+                        Text(entry.title, style = MaterialTheme.typography.titleSmall.copy(textDecoration = if (entry.kind == "task" && entry.done) TextDecoration.LineThrough else TextDecoration.None), color = if (entry.kind == "task" && entry.done) androidx.compose.ui.graphics.Color(0xFF888493) else androidx.compose.ui.graphics.Color(0xFFE8E7E3))
                         if (entry.body.isNotBlank()) {
                             Spacer(Modifier.height(3.dp))
                             Text(entry.body, maxLines = 3, color = androidx.compose.ui.graphics.Color(0xFFB8B8AF),
