@@ -4,7 +4,7 @@ const DRIVE_FILE='daybook-data.json';
 const SYNC_BASE_KEY='daybook-sync-base-v1';
 const GOOGLE_CLIENT_ID='731569027724-g32icn6rg67mun8vrvjti68metjv6tnm.apps.googleusercontent.com';
 
-let state={tasks:[],notes:[]},view='home',taskFilter='all',noteFilter='all',tokenClient=null,accessToken=null,toastTimer=null;
+let state={tasks:[],notes:[]},view='home',taskFilter='all',noteFilter='all',tokenClient=null,accessToken=null,toastTimer=null,syncTimer=null,syncRunning=false,syncAgain=false;
 
 const $=id=>document.getElementById(id);
 const HOME_TEMPLATE=$('content').innerHTML;
@@ -21,7 +21,8 @@ function load(){
 function persist(){
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
   render();
-  $('footerSync').textContent=accessToken?'Синхронизация с Google Drive включена':'Данные хранятся локально';
+  $('footerSync').textContent=accessToken?'Автоматическая синхронизация включена':'Данные хранятся локально';
+  scheduleDriveSync();
 }
 
 function escapeHtml(s=''){
@@ -258,8 +259,10 @@ function driveInit(){
     client_id:GOOGLE_CLIENT_ID,
     scope:'https://www.googleapis.com/auth/drive.file',
     callback:async(resp)=>{
-      if(resp.error){
-        showToast('Не удалось подключить Google Drive');
+      if(resp.error||!resp.access_token){
+        accessToken=null;
+        setSyncUI(false);
+        showToast('Не удалось подключить Google Drive. Нажми «Подключить» и повтори.');
         return;
       }
 
@@ -281,13 +284,24 @@ async function driveFetch(path,opts={}){
     }
   });
 
-  if(!r.ok)throw new Error('Drive API: '+r.status);
+  if(!r.ok){
+    if(r.status===401){accessToken=null;setSyncUI(false);}
+    throw new Error('Drive API: '+r.status);
+  }
 
   return r.status===204?null:r.json();
 }
 
-async function syncDrive(){
+function scheduleDriveSync(){
   if(!accessToken)return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>syncDrive(true),900);
+}
+
+async function syncDrive(quiet=false){
+  if(!accessToken)return;
+  if(syncRunning){syncAgain=true;return;}
+  syncRunning=true;
 
   try{
     const q=encodeURIComponent("name='Daybook' and mimeType='application/vnd.google-apps.folder' and trashed=false");
@@ -341,8 +355,8 @@ async function syncDrive(){
     if(!file){
       await writeRemote(null,state);
       localStorage.setItem(SYNC_BASE_KEY,localJSON);
-      showToast('Данные сохранены в папке Daybook на Google Drive');
-      $('footerSync').textContent='Синхронизация с Google Drive включена';
+      if(!quiet)showToast('Данные сохранены в папке Daybook на Google Drive');
+      $('footerSync').textContent='Автоматическая синхронизация включена';
       return;
     }
 
@@ -360,17 +374,17 @@ async function syncDrive(){
         localStorage.setItem(STORAGE_KEY,remoteJSON);
         localStorage.setItem(SYNC_BASE_KEY,remoteJSON);
         render();
-        showToast('Данные загружены из папки Daybook');
+        if(!quiet)showToast('Данные загружены из папки Daybook');
         $('footerSync').textContent='Синхронизация с Google Drive включена';
         return;
       }
       if(localJSON===remoteJSON){
         localStorage.setItem(SYNC_BASE_KEY,localJSON);
-        showToast('Данные уже синхронизированы');
+        if(!quiet)showToast('Данные уже синхронизированы');
         $('footerSync').textContent='Синхронизация с Google Drive включена';
         return;
       }
-      showToast('Конфликт данных: автоматическая запись остановлена');
+      if(!quiet)showToast('Конфликт данных: автоматическая запись остановлена');
       return;
     }
 
@@ -378,7 +392,7 @@ async function syncDrive(){
     const remoteChanged=remoteJSON!==baseJSON;
 
     if(localChanged&&remoteChanged&&localJSON!==remoteJSON){
-      showToast('Конфликт изменений. Данные не перезаписаны');
+      if(!quiet)showToast('Конфликт изменений. Данные не перезаписаны');
       return;
     }
 
@@ -387,7 +401,7 @@ async function syncDrive(){
       localStorage.setItem(STORAGE_KEY,remoteJSON);
       localStorage.setItem(SYNC_BASE_KEY,remoteJSON);
       render();
-      showToast('Получены изменения из Google Drive');
+      if(!quiet)showToast('Получены изменения из Google Drive');
       $('footerSync').textContent='Синхронизация с Google Drive включена';
       return;
     }
@@ -395,7 +409,7 @@ async function syncDrive(){
     if(localChanged&&!remoteChanged){
       await writeRemote(file.id,state);
       localStorage.setItem(SYNC_BASE_KEY,localJSON);
-      showToast('Изменения отправлены в папку Daybook');
+      if(!quiet)showToast('Изменения отправлены в папку Daybook');
       $('footerSync').textContent='Синхронизация с Google Drive включена';
       return;
     }
@@ -405,7 +419,10 @@ async function syncDrive(){
     $('footerSync').textContent='Синхронизация с Google Drive включена';
   }catch(err){
     console.error(err);
-    showToast('Ошибка синхронизации. Локальные данные сохранены');
+    if(!quiet)showToast(err.message==='Drive API: 401'?'Сеанс Google Drive истёк. Нажми «Подключить» снова.':'Ошибка синхронизации. Локальные данные сохранены');
+  }finally{
+    syncRunning=false;
+    if(syncAgain){syncAgain=false;scheduleDriveSync();}
   }
 }
 
@@ -416,9 +433,11 @@ function driveAction(){
 $('driveButton').addEventListener('click',driveAction);
 $('driveButtonTop').addEventListener('click',driveAction);
 
-window.addEventListener('online',()=>{
-  if(accessToken)syncDrive();
-});
+window.addEventListener('online',()=>{if(accessToken)syncDrive(true);});
+window.addEventListener('focus',()=>{if(accessToken)syncDrive(true);});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&accessToken)syncDrive(true);});
+// Refresh remote changes while the app is open; changes are still saved locally first.
+setInterval(()=>{if(accessToken&&!document.hidden)syncDrive(true);},30000);
 
 load();
 dateLabel();
