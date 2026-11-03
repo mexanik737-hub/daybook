@@ -22,3 +22,69 @@ dialog{width:min(540px,calc(100% - 28px));border:1px solid #353a46;border-radius
   .drive-top-button{height:36px;padding:0 9px;font-size:11px}
   .topbar #newNoteTop{width:36px;height:36px;flex-shrink:0}
 }
+
+
+/* Responsive layout pass: keep every page inside the device viewport */
+html{min-width:0;overflow-x:hidden}
+body{min-width:0;max-width:100%;overflow-x:hidden}
+.app-shell,.main,.content{min-width:0;max-width:100%}
+.main{min-height:100vh;min-height:100dvh}
+.content{width:100%;overflow-wrap:anywhere}
+button,input,textarea,select{max-width:100%;min-width:0}
+.search-wrap{min-width:0}
+.welcome>div:first-child{min-width:0}
+.quick-card,.task-row,.note-card{min-width:0;max-width:100%}
+.task-meta{max-width:38%;overflow:hidden;text-overflow:ellipsis}
+.page-list,.task-list,.notes-grid,.page-notes{min-width:0;max-width:100%}
+.page-notes{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.notes-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.dialog-actions{min-width:0}
+dialog{max-height:calc(100dvh - 28px);overflow-y:auto}
+textarea{max-width:100%}
+.mobile-nav{padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right));padding-bottom:env(safe-area-inset-bottom)}
+@media(max-width:900px){
+ .sidebar{width:clamp(180px,23vw,210px);padding-left:12px;padding-right:12px}
+ .content{padding-left:clamp(18px,4vw,36px);padding-right:clamp(18px,4vw,36px)}
+}
+@media(max-width:640px){
+ .app-shell{min-height:100dvh}
+ .main{min-height:100dvh}
+ .topbar{width:100%;min-width:0}
+ .content{padding-left:clamp(13px,4vw,20px);padding-right:clamp(13px,4vw,20px);padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+ .welcome{min-width:0}
+ .quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .quick-card{min-width:0}
+ .quick-card>span:nth-child(2){min-width:0}
+ .quick-card small{overflow-wrap:anywhere}
+ .notes-grid,.page-notes{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .note-card{min-width:0}
+ .view-toolbar{min-width:0}
+ .filter-tabs{max-width:100%;min-width:0}
+ .filter-tabs button{min-width:0;white-space:nowrap}
+ .mobile-nav{height:calc(64px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom)}
+ .mobile-nav button{flex:1;min-width:0}
+}
+@media(max-width:420px){
+ .topbar{height:auto;min-height:104px;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-rows:42px 42px;gap:6px;padding:8px 10px}
+ .home-top-button{grid-column:1;grid-row:1}
+ .mobile-brand{grid-column:2;grid-row:1}
+ .drive-top-button{grid-column:3;grid-row:1}
+ .topbar #newNoteTop{grid-column:4;grid-row:1}
+ .search-wrap{grid-column:1/-1;grid-row:2;width:100%;max-width:none;height:38px}
+ .top-sync{display:none}
+ .content{padding-top:20px}
+ .quick-actions{grid-template-columns:1fr}
+ .quick-card{padding:14px}
+ .notes-grid,.page-notes{grid-template-columns:1fr}
+ .note-card{min-height:110px}
+ .section-heading{gap:8px;align-items:center}
+ .section-heading h2{font-size:17px}
+ .text-button{padding:6px 2px;white-space:nowrap}
+ .view-title{font-size:26px}
+ .task-fields{gap:10px}
+ dialog{padding:18px}
+}
+@media(min-width:641px){
+ .mobile-nav{display:none!important}
+ .home-top-button,.drive-top-button{display:none!important}
+}
