@@ -103,33 +103,78 @@ public partial class MainWindow : Window
 
     private async void DriveSettings_Click(object sender, RoutedEventArgs e)
     {
-        var oauth = new GoogleOAuthPkceClient();
         try
         {
-            var currentClientId = await oauth.GetConfiguredClientIdAsync();
+            var currentClientId = await _oauth.GetConfiguredClientIdAsync();
             if (string.IsNullOrWhiteSpace(currentClientId))
             {
                 var dialog = new DriveSettingsWindow(currentClientId) { Owner = this };
                 if (dialog.ShowDialog() != true) return;
-                await oauth.ConfigureClientIdAsync(dialog.ClientId);
+                await _oauth.ConfigureClientIdAsync(dialog.ClientId);
             }
 
-            var accessToken = await oauth.GetAccessTokenAsync();
-            var coordinator = new DriveSyncCoordinator(_store);
-            var outcome = await coordinator.SyncAsync(accessToken);
-            await LoadAsync();
-
-            var details = outcome.Conflicts is { Count: > 0 }
-                ? "\\nЗаписи: " + string.Join(", ", outcome.Conflicts)
-                : "";
-            MessageBox.Show(outcome.Message + details, "Daybook · Google Drive",
-                MessageBoxButton.OK,
-                outcome.Status == "conflict" ? MessageBoxImage.Warning : MessageBoxImage.Information);
+            await RunDriveSyncAsync(quiet: false, allowInteractive: true);
         }
         catch (Exception ex)
         {
+            DriveStatus.Text = ex.Message;
             MessageBox.Show(ex.Message, "Daybook · Google Drive",
                 MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ScheduleDriveSync()
+    {
+        _syncDebounceTimer.Stop();
+        _syncDebounceTimer.Start();
+    }
+
+    private async Task RunDriveSyncAsync(bool quiet, bool allowInteractive)
+    {
+        if (_syncRunning)
+        {
+            _syncAgain = true;
+            return;
+        }
+
+        _syncRunning = true;
+        try
+        {
+            do
+            {
+                _syncAgain = false;
+                if (!allowInteractive && !await _oauth.HasSavedRefreshTokenAsync())
+                    return;
+
+                DriveStatus.Text = "Синхронизация с Google Drive…";
+                var accessToken = await _oauth.GetAccessTokenAsync(allowInteractive: allowInteractive);
+                var outcome = await _driveSync.SyncAsync(accessToken);
+                DriveStatus.Text = outcome.Message;
+                await LoadAsync();
+
+                if (!quiet)
+                {
+                    var details = outcome.Conflicts is { Count: > 0 }
+                        ? "\\nЗаписи: " + string.Join(", ", outcome.Conflicts)
+                        : "";
+                    MessageBox.Show(outcome.Message + details, "Daybook · Google Drive",
+                        MessageBoxButton.OK,
+                        outcome.Status == "conflict" ? MessageBoxImage.Warning : MessageBoxImage.Information);
+                }
+
+                allowInteractive = false;
+            } while (_syncAgain);
+        }
+        catch (Exception ex)
+        {
+            DriveStatus.Text = ex.Message;
+            if (!quiet)
+                MessageBox.Show(ex.Message, "Daybook · Google Drive",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _syncRunning = false;
         }
     }
 
