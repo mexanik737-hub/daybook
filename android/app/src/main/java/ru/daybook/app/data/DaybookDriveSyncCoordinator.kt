@@ -89,7 +89,7 @@ class DaybookDriveSyncCoordinator(
         saveBaseline(finalFile.id, merged)
         return Result(
             if (documentsEqual(local, merged) && documentsEqual(remote, merged)) "unchanged" else "merged",
-            "Синхронизация завершена. Изменения с устройств объединены без потери независимых записей."
+            "Синхронизация завершена. Изменения с устройств объединены."
         )
     }
 
