@@ -2,6 +2,8 @@ package ru.daybook.app
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -37,7 +39,14 @@ data class BoardNode(
 )
 
 @Serializable
-data class BoardLink(val from: String, val to: String, val curved: Boolean = false)
+data class BoardLink(
+    val from: String,
+    val to: String,
+    val curved: Boolean = false,
+    val style: String = if (curved) "curved" else "straight",
+    val color: Long = 0xFFB69CFF,
+    val arrowEnd: Boolean = true
+)
 
 @Serializable
 data class BoardDocument(
@@ -63,6 +72,9 @@ fun BoardEditor(
     var connectMode by remember { mutableStateOf(false) }
     var panMode by remember { mutableStateOf(false) }
     var addShape by remember { mutableStateOf("rounded") }
+    var linkStyle by remember { mutableStateOf("straight") }
+    var linkColor by remember { mutableLongStateOf(0xFFB69CFF) }
+    var linkArrow by remember { mutableStateOf(true) }
     var zoom by remember { mutableFloatStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     var editLabel by remember { mutableStateOf<String?>(null) }
@@ -91,6 +103,24 @@ fun BoardEditor(
             FilterChip(selected = panMode, onClick = { panMode = !panMode; connectMode = false; connectFrom = null; selectedId = null },
                 label = { Text("Рука") })
         }
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Линия", color = muted, fontSize = 11.sp)
+            listOf("straight" to "Прямая", "curved" to "Кривая", "arc" to "Дуга").forEach { (style, label) ->
+                FilterChip(selected = linkStyle == style, onClick = { linkStyle = style },
+                    label = { Text(label, fontSize = 11.sp) })
+            }
+            FilterChip(selected = linkArrow, onClick = { linkArrow = !linkArrow },
+                label = { Text(if (linkArrow) "Со стрелкой" else "Без стрелки", fontSize = 11.sp) })
+            listOf(0xFFB69CFFL, 0xFF63B6E8L, 0xFF70C99AL, 0xFFE6A36AL, 0xFFE58D9BL).forEach { color ->
+                Surface(onClick = { linkColor = color }, modifier = Modifier.size(24.dp),
+                    shape = RoundedCornerShape(50), color = Color(color),
+                    border = if (linkColor == color) androidx.compose.foundation.BorderStroke(2.dp, Color.White) else null) {}
+            }
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { zoom = (zoom / 1.15f).coerceAtLeast(0.5f) }) { Text("−", color = accent) }
             Text("${(zoom * 100).toInt()}%", color = muted, fontSize = 12.sp)
@@ -112,7 +142,7 @@ fun BoardEditor(
                                     selectedId = hit.id
                                 } else if (hit.id != from) {
                                     val exists = doc.links.any { (it.from == from && it.to == hit.id) || (it.from == hit.id && it.to == from) }
-                                    if (!exists) doc = doc.copy(links = doc.links + BoardLink(from, hit.id))
+                                    if (!exists) doc = doc.copy(links = doc.links + BoardLink(from, hit.id, style = linkStyle, color = linkColor, arrowEnd = linkArrow))
                                     connectFrom = null
                                     selectedId = hit.id
                                 }
@@ -165,15 +195,35 @@ fun BoardEditor(
                     val a = doc.nodes.firstOrNull { it.id == link.from } ?: return@forEach
                     val b = doc.nodes.firstOrNull { it.id == link.to } ?: return@forEach
                     val start = screen(a); val end = screen(b)
-                    drawLine(Color(0xFFB69CFF), start, end, 2.5f)
-                    val angle = kotlin.math.atan2(end.y - start.y, end.x - start.x)
-                    val arrow = Path().apply {
-                        moveTo(end.x, end.y)
-                        lineTo(end.x - 13f * zoom * kotlin.math.cos(angle - 0.45f), end.y - 13f * zoom * kotlin.math.sin(angle - 0.45f))
-                        lineTo(end.x - 13f * zoom * kotlin.math.cos(angle + 0.45f), end.y - 13f * zoom * kotlin.math.sin(angle + 0.45f))
-                        close()
+                    val dx = end.x - start.x
+                    val dy = end.y - start.y
+                    val distance = kotlin.math.sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+                    val normal = Offset(-dy / distance, dx / distance)
+                    val control = when (link.style) {
+                        "curved" -> Offset((start.x + end.x) / 2f + normal.x * distance * 0.22f, (start.y + end.y) / 2f + normal.y * distance * 0.22f)
+                        "arc" -> Offset((start.x + end.x) / 2f + normal.x * distance * 0.38f, (start.y + end.y) / 2f + normal.y * distance * 0.38f)
+                        else -> null
                     }
-                    drawPath(arrow, Color(0xFFB69CFF))
+                    val lineColor = Color(link.color)
+                    if (control == null) drawLine(lineColor, start, end, 2.5f)
+                    else {
+                        val curve = Path().apply {
+                            moveTo(start.x, start.y)
+                            quadraticTo(control.x, control.y, end.x, end.y)
+                        }
+                        drawPath(curve, lineColor, style = Stroke(width = 2.5f))
+                    }
+                    if (link.arrowEnd) {
+                        val tangent = if (control == null) Offset(dx, dy) else Offset(end.x - control.x, end.y - control.y)
+                        val angle = kotlin.math.atan2(tangent.y, tangent.x)
+                        val arrow = Path().apply {
+                            moveTo(end.x, end.y)
+                            lineTo(end.x - 13f * zoom * kotlin.math.cos(angle - 0.45f), end.y - 13f * zoom * kotlin.math.sin(angle - 0.45f))
+                            lineTo(end.x - 13f * zoom * kotlin.math.cos(angle + 0.45f), end.y - 13f * zoom * kotlin.math.sin(angle + 0.45f))
+                            close()
+                        }
+                        drawPath(arrow, lineColor)
+                    }
                 }
                 doc.nodes.forEach { node ->
                     val p = screen(node)
