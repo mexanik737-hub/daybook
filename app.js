@@ -286,7 +286,15 @@ async function driveFetch(path,opts={}){
 
   if(!r.ok){
     if(r.status===401){accessToken=null;setSyncUI(false);}
-    throw new Error('Drive API: '+r.status);
+    let detail='';
+    try{
+      const payload=await r.json();
+      detail=payload.error?.message||payload.error_description||'';
+      if(payload.error?.errors?.[0]?.reason)detail+=' ('+payload.error.errors[0].reason+')';
+    }catch{
+      try{detail=(await r.text()).slice(0,240);}catch{}
+    }
+    throw new Error('Google Drive '+r.status+(detail?': '+detail:''));
   }
 
   return r.status===204?null:r.json();
@@ -350,7 +358,17 @@ async function syncDrive(quiet=false){
         },
         body
       });
-      if(!response.ok)throw new Error('Drive upload: '+response.status);
+      if(!response.ok){
+        let detail='';
+        try{
+          const payload=await response.json();
+          detail=payload.error?.message||'';
+          if(payload.error?.errors?.[0]?.reason)detail+=' ('+payload.error.errors[0].reason+')';
+        }catch{
+          try{detail=(await response.text()).slice(0,240);}catch{}
+        }
+        throw new Error('Загрузка в Google Drive '+response.status+(detail?': '+detail:''));
+      }
     }
 
     if(!file){
@@ -381,7 +399,7 @@ async function syncDrive(quiet=false){
       }
       if(localJSON===remoteJSON){
         localStorage.setItem(SYNC_BASE_KEY,localJSON);
-        if(!quiet)if(!quiet)showToast('Данные уже синхронизированы');
+        if(!quiet)showToast('Данные уже синхронизированы');
         $('footerSync').textContent='Автоматическая синхронизация включена';
         return;
       }
@@ -420,7 +438,7 @@ async function syncDrive(quiet=false){
     $('footerSync').textContent='Автоматическая синхронизация включена';
   }catch(err){
     console.error(err);
-    if(!quiet)showToast(err.message==='Drive API: 401'?'Сеанс Google Drive истёк. Нажми «Подключить» снова.':'Ошибка синхронизации. Локальные данные сохранены');
+    if(!quiet)showToast(err.message.includes('401')?'Сеанс Google Drive истёк. Нажми «Подключить» снова.':err.message.slice(0,150));
   }finally{
     syncRunning=false;
     if(syncAgain){syncAgain=false;scheduleDriveSync();}
