@@ -30,7 +30,7 @@ class DaybookDriveSyncCoordinator(
         }
 
         val remote = normalize(drive.downloadDocument(remoteFile, accessToken))
-        val baseline = baselineJson?.let(DaybookJson::decode)
+        val baseline = baselineJson?.let { DaybookJson.decode(it) }
 
         if (baseline == null) {
             when {
