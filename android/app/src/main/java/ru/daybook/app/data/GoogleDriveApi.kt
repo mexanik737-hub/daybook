@@ -68,6 +68,95 @@ class GoogleDriveApi(
         }
     }
 
+    /** Generic file lookup used for independent Daybook data streams. */
+    suspend fun findFile(folderId: String, fileName: String, accessToken: String): DriveFile? = withContext(Dispatchers.IO) {
+        val query = "'$folderId' in parents and name = '$fileName' and trashed = false"
+        val result = requestJson(
+            accessToken,
+            "https://www.googleapis.com/drive/v3/files?q=${encode(query)}&spaces=drive&fields=files(id,name,version)&pageSize=100"
+        )
+        val files = result.jsonObject["files"]?.jsonArray.orEmpty()
+        if (files.isEmpty()) return@withContext null
+        val item = files.first().jsonObject
+        val id = item["id"]!!.jsonPrimitive.content
+        val metadataRequest = Request.Builder()
+            .url("https://www.googleapis.com/drive/v3/files/$id?fields=id,name,version")
+            .header("Authorization", "Bearer $accessToken")
+            .get()
+            .build()
+        client.newCall(metadataRequest).execute().use { response ->
+            if (!response.isSuccessful) throw DriveApiException(response.code, response.body?.string().orEmpty())
+            val metadata = Json.parseToJsonElement(response.body?.string().orEmpty()).jsonObject
+            DriveFile(
+                id = id,
+                name = fileName,
+                version = metadata["version"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L,
+                etag = response.header("ETag")
+            )
+        }
+    }
+
+    suspend fun downloadText(file: DriveFile, accessToken: String): String = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("https://www.googleapis.com/drive/v3/files/${file.id}?alt=media")
+            .header("Authorization", "Bearer $accessToken")
+            .get()
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw DriveApiException(response.code, response.body?.string().orEmpty())
+            response.body?.string().orEmpty()
+        }
+    }
+
+    suspend fun uploadText(
+        fileId: String?,
+        folderId: String,
+        fileName: String,
+        payload: String,
+        accessToken: String,
+        expectedEtag: String? = null
+    ): DriveFile = withContext(Dispatchers.IO) {
+        if (fileId != null && (expectedEtag.isNullOrBlank() || expectedEtag.startsWith("W/"))) {
+            throw DriveApiException(412, "Google Drive не вернул сильный ETag; обновление остановлено ради защиты от перезаписи.")
+        }
+        val metadata = if (fileId == null) {
+            """{"name":"$fileName","mimeType":"application/json","parents":["$folderId"]}"""
+        } else {
+            """{"name":"$fileName","mimeType":"application/json"}"""
+        }
+        val multipart = MultipartBody.Builder("daybook_${UUID.randomUUID().toString().replace("-", "")}")
+            .setType("multipart/related".toMediaType())
+            .addPart(
+                okhttp3.Headers.Builder().add("Content-Type", "application/json; charset=UTF-8").build(),
+                metadata.toRequestBody("application/json; charset=UTF-8".toMediaType())
+            )
+            .addPart(
+                okhttp3.Headers.Builder().add("Content-Type", "application/json; charset=UTF-8").build(),
+                payload.toRequestBody("application/json; charset=UTF-8".toMediaType())
+            )
+            .build()
+        val url = if (fileId == null) {
+            "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,version"
+        } else {
+            "https://www.googleapis.com/upload/drive/v3/files/$fileId?uploadType=multipart&fields=id,name,version"
+        }
+        val builder = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $accessToken")
+            .method(if (fileId == null) "POST" else "PATCH", multipart)
+        if (!expectedEtag.isNullOrBlank()) builder.header("If-Match", expectedEtag)
+        client.newCall(builder.build()).execute().use { response ->
+            if (!response.isSuccessful) throw DriveApiException(response.code, response.body?.string().orEmpty())
+            val json = Json.parseToJsonElement(response.body?.string().orEmpty()).jsonObject
+            DriveFile(
+                id = json["id"]!!.jsonPrimitive.content,
+                name = fileName,
+                version = json["version"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L,
+                etag = response.header("ETag")
+            )
+        }
+    }
+
     suspend fun downloadDocument(file: DriveFile, accessToken: String): DaybookDocument =
         withContext(Dispatchers.IO) {
             val request = Request.Builder()
