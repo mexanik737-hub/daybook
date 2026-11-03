@@ -3,6 +3,8 @@ package ru.daybook.app
 import android.app.DatePickerDialog
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +19,9 @@ import androidx.compose.ui.platform.LocalContext
 import java.util.Calendar
 import java.util.Locale
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.api.Scope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -28,8 +33,34 @@ import ru.daybook.app.data.DaybookEntity
 import ru.daybook.app.data.DaybookRepository
 
 class MainActivity : ComponentActivity() {
+    private var driveConnected by mutableStateOf(false)
+    private var driveStatus by mutableStateOf("Не подключён")
+    private var driveAccessToken: String? = null
+    private lateinit var authorizationLauncher: androidx.activity.result.ActivityResultLauncher<IntentSenderRequest>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        authorizationLauncher = registerForActivityResult(
+            ActivityResultContracts.StartIntentSenderForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_OK && result.data != null) {
+                runCatching {
+                    Identity.getAuthorizationClient(this)
+                        .getAuthorizationResultFromIntent(result.data!!)
+                }.onSuccess { authorizationResult ->
+                    driveAccessToken = authorizationResult.accessToken
+                    driveConnected = !driveAccessToken.isNullOrBlank()
+                    driveStatus = if (driveConnected) "Google Drive подключён" else "Не удалось получить токен"
+                }.onFailure { error ->
+                    driveConnected = false
+                    driveStatus = error.message ?: "Ошибка авторизации"
+                }
+            } else {
+                driveConnected = false
+                driveStatus = "Авторизация отменена"
+            }
+        }
+
         val repository = DaybookRepository(this)
         setContent {
             val vm: DaybookViewModel = viewModel(factory = object : ViewModelProvider.Factory {
@@ -37,8 +68,37 @@ class MainActivity : ComponentActivity() {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
                     DaybookViewModel(repository) as T
             })
-            DaybookApp(vm)
+            DaybookApp(vm, driveConnected, driveStatus, ::authorizeDrive)
         }
+    }
+
+    private fun authorizeDrive() {
+        val request = AuthorizationRequest.builder()
+            .setRequestedScopes(listOf(Scope("https://www.googleapis.com/auth/drive.file")))
+            .build()
+
+        Identity.getAuthorizationClient(this)
+            .authorize(request)
+            .addOnSuccessListener { result ->
+                if (result.hasResolution()) {
+                    val pendingIntent = result.pendingIntent
+                    if (pendingIntent != null) {
+                        authorizationLauncher.launch(
+                            IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+                        )
+                    } else {
+                        driveStatus = "Google не вернул окно подтверждения"
+                    }
+                } else {
+                    driveAccessToken = result.accessToken
+                    driveConnected = !driveAccessToken.isNullOrBlank()
+                    driveStatus = if (driveConnected) "Google Drive подключён" else "Не удалось получить токен"
+                }
+            }
+            .addOnFailureListener { error ->
+                driveConnected = false
+                driveStatus = error.message ?: "Ошибка подключения Google Drive"
+            }
     }
 }
 
@@ -60,7 +120,7 @@ class DaybookViewModel(private val repository: DaybookRepository) : ViewModel() 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DaybookApp(vm: DaybookViewModel) {
+private fun DaybookApp(vm: DaybookViewModel, driveConnected: Boolean, driveStatus: String, onConnectDrive: () -> Unit) {
     val entries by vm.entries.collectAsState()
     val context = LocalContext.current
     var section by remember { mutableStateOf("home") }
@@ -108,9 +168,11 @@ private fun DaybookApp(vm: DaybookViewModel) {
                 TopAppBar(
                     title = { Text("daybook") },
                     actions = {
-                        Text(if (entries.isEmpty()) "Локально" else "${entries.size} записей",
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(end = 16.dp))
+                        Column(horizontalAlignment = Alignment.End) {
+                            TextButton(onClick = onConnectDrive) { Text(if (driveConnected) "Drive ✓" else "Подключить Drive") }
+                            Text(driveStatus, style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(end = 12.dp))
+                        }
                     }
                 )
             },
