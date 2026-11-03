@@ -1,5 +1,9 @@
 name: Native builds
 
+concurrency:
+  group: native-build-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [native-rewrite]
