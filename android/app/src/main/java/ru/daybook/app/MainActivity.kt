@@ -348,7 +348,7 @@ private fun DaybookApp(
                                 letterSpacing = androidx.compose.ui.unit.TextUnit(2f, androidx.compose.ui.unit.TextUnitType.Sp))
                         }
                         Text(
-                            when (section) { "tasks" -> "Мои задачи"; "notes" -> "Мои заметки"; else -> "Моё пространство" },
+                            when (section) { "tasks" -> "Мои задачи"; "notes" -> "Мои заметки"; "boards" -> "Мои схемы"; else -> "Моё пространство" },
                             style = MaterialTheme.typography.headlineSmall,
                             color = ink
                         )
@@ -399,37 +399,37 @@ private fun DaybookApp(
                     val homeNotes = notes.sortedByDescending { it.updated }.take(2)
                     if (homeNotes.isEmpty()) DaybookEmpty("Здесь будет твоя библиотека", "Сохраняй идеи, планы и важные мысли.")
                     else EntryList(homeNotes, vm, ::openEditor, Modifier.heightIn(max = 145.dp))
+                } else if (section == "tasks") {
+                    DaybookSearchField(search, { search = it })
+                    Spacer(Modifier.height(14.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        listOf("all" to "Все", "active" to "Активные", "done" to "Завершённые").forEach { (key, label) ->
+                            FilterChip(
+                                selected = taskFilter == key,
+                                onClick = { taskFilter = key },
+                                label = { Text(label) },
+                                shape = RoundedCornerShape(50),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = androidx.compose.ui.graphics.Color(0xFF382C55),
+                                    selectedLabelColor = accent
+                                )
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    if (filteredTasks.isEmpty()) DaybookEmpty("Ничего не найдено", "Попробуй изменить запрос или добавь новую задачу.")
+                    else EntryList(filteredTasks, vm, ::openEditor, Modifier.weight(1f))
                 } else if (section == "notes") {
                     DaybookSearchField(search, { search = it })
                     Spacer(Modifier.height(14.dp))
-                    if (section == "tasks") {
-                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            listOf("all" to "Все", "active" to "Активные", "done" to "Завершённые").forEach { (key, label) ->
-                                FilterChip(
-                                    selected = taskFilter == key,
-                                    onClick = { taskFilter = key },
-                                    label = { Text(label) },
-                                    shape = RoundedCornerShape(50),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = androidx.compose.ui.graphics.Color(0xFF384536),
-                                        selectedLabelColor = accent
-                                    )
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        if (filteredTasks.isEmpty()) DaybookEmpty("Ничего не найдено", "Попробуй изменить запрос или добавь новую задачу.")
-                        else EntryList(filteredTasks, vm, ::openEditor, Modifier.weight(1f))
-                    } else {
-                        Text(filteredNotes.size.toString() + " заметок", style = MaterialTheme.typography.labelMedium, color = muted)
-                        Spacer(Modifier.height(10.dp))
-                        if (filteredNotes.isEmpty()) DaybookEmpty("Заметок пока нет", "Нажми «Новая заметка», чтобы записать мысль.")
-                        else EntryList(filteredNotes, vm, ::openEditor, Modifier.weight(1f))
-                    }
+                    Text(filteredNotes.size.toString() + " заметок", style = MaterialTheme.typography.labelMedium, color = muted)
+                    Spacer(Modifier.height(10.dp))
+                    if (filteredNotes.isEmpty()) DaybookEmpty("Заметок пока нет", "Нажми «Новая заметка», чтобы записать мысль.")
+                    else EntryList(filteredNotes, vm, ::openEditor, Modifier.weight(1f))
                 } else {
                     Text("Визуальные схемы", style = MaterialTheme.typography.titleLarge, color = ink)
                     Spacer(Modifier.height(8.dp))
-                    DaybookEmpty("Рабочее поле готовится", "Здесь появятся блоки, фигуры и связи между идеями. Сейчас мы сначала обновляем редактор и навигацию.")
+                    DaybookEmpty("Рабочее поле готовится", "Здесь появятся блоки, фигуры и связи между идеями.")
                 }
             }
         }
