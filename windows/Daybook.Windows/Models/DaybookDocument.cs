@@ -28,4 +28,7 @@ public sealed class DaybookEntry
     public string? Priority { get; set; } = "normal";
     [JsonPropertyName("done")]
     public bool Done { get; set; }
+
+    [JsonIgnore]
+    public bool IsTask { get; set; }
 }
