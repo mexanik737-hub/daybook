@@ -25,8 +25,10 @@
     </aside>
     <main class="main">
       <header class="topbar">
-        <div class="mobile-brand"><div class="brand-mark">D</div><span>daybook</span></div>
+        <button class="home-top-button" data-view="home" aria-label="На главную">⌂</button><div class="mobile-brand"><div class="brand-mark">D</div><span>daybook</span></div>
         <div class="search-wrap"><span>⌕</span><input id="searchInput" type="search" placeholder="Поиск заметок и задач..." aria-label="Поиск"></div>
+        <div class="top-sync" id="topSyncStatus"><span class="status-dot"></span><span>Локально</span></div>
+        <button class="drive-top-button" id="driveButtonTop" title="Google Drive">☁ <span>Drive</span></button>
         <button class="icon-button" id="newNoteTop" title="Новая заметка">＋</button>
         <button class="avatar" title="Личный профиль">Я</button>
       </header>
