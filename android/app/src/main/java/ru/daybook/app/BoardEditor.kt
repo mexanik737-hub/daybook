@@ -59,6 +59,8 @@ fun BoardEditor(
     }
     var selectedId by remember { mutableStateOf<String?>(null) }
     var connectFrom by remember { mutableStateOf<String?>(null) }
+    var connectMode by remember { mutableStateOf(false) }
+    var panMode by remember { mutableStateOf(false) }
     var addShape by remember { mutableStateOf("rounded") }
     var zoom by remember { mutableFloatStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
@@ -80,11 +82,13 @@ fun BoardEditor(
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             listOf("rounded" to "Блок", "circle" to "Круг", "diamond" to "Ромб").forEach { (shape, label) ->
-                FilterChip(selected = addShape == shape && connectFrom == null, onClick = { addShape = shape; connectFrom = null },
+                FilterChip(selected = addShape == shape && !connectMode && !panMode, onClick = { addShape = shape; connectMode = false; connectFrom = null; panMode = false },
                     label = { Text(label) })
             }
-            FilterChip(selected = connectFrom != null, onClick = { connectFrom = null },
+            FilterChip(selected = connectMode, onClick = { connectMode = !connectMode; connectFrom = null; panMode = false },
                 label = { Text("Связь") })
+            FilterChip(selected = panMode, onClick = { panMode = !panMode; connectMode = false; connectFrom = null; selectedId = null },
+                label = { Text("Рука") })
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { zoom = (zoom / 1.15f).coerceAtLeast(0.5f) }) { Text("−", color = accent) }
@@ -93,16 +97,26 @@ fun BoardEditor(
             TextButton(onClick = { pan = Offset.Zero; zoom = 1f }) { Text("Сброс", color = muted) }
         }
         Box(Modifier.fillMaxWidth().weight(1f).background(Color(0xFF191622), RoundedCornerShape(18.dp))) {
-            Canvas(Modifier.fillMaxSize().pointerInput(doc, zoom, pan, connectFrom, addShape) {
+            Canvas(Modifier.fillMaxSize().pointerInput(doc, zoom, pan, connectFrom, connectMode, panMode, addShape) {
                 detectDragGestures(
                     onDragStart = { point ->
                         val world = Offset((point.x - pan.x) / zoom, (point.y - pan.y) / zoom)
                         val hit = doc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
-                        if (connectFrom != null) {
-                            if (hit != null && hit.id != connectFrom) {
-                                doc = doc.copy(links = doc.links + BoardLink(connectFrom!!, hit.id))
+                        if (panMode) {
+                            selectedId = null
+                        } else if (connectMode) {
+                            if (hit != null) {
+                                val from = connectFrom
+                                if (from == null) {
+                                    connectFrom = hit.id
+                                    selectedId = hit.id
+                                } else if (hit.id != from) {
+                                    val exists = doc.links.any { (it.from == from && it.to == hit.id) || (it.from == hit.id && it.to == from) }
+                                    if (!exists) doc = doc.copy(links = doc.links + BoardLink(from, hit.id))
+                                    connectFrom = null
+                                    selectedId = hit.id
+                                }
                             }
-                            connectFrom = null
                         } else if (hit != null) {
                             selectedId = hit.id
                         } else {
@@ -113,12 +127,12 @@ fun BoardEditor(
                     },
                     onDrag = { change, delta ->
                         change.consume()
-                        if (selectedId != null && connectFrom == null) {
+                        if (panMode || (connectMode && connectFrom == null)) {
+                            pan += delta
+                        } else if (!connectMode && selectedId != null) {
                             doc = doc.copy(nodes = doc.nodes.map {
                                 if (it.id == selectedId) it.copy(x = it.x + delta.x / zoom, y = it.y + delta.y / zoom) else it
                             })
-                        } else {
-                            pan += delta
                         }
                     }
                 )
@@ -181,7 +195,7 @@ fun BoardEditor(
         }
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(if (connectFrom == null) "Перетаскивай блоки. Нажми «Связь», затем два блока." else "Выбери второй блок для связи",
+            Text(when { panMode -> "Перетаскивай поле, чтобы перемещаться по схеме"; connectMode && connectFrom == null -> "Выбери первую фигуру для связи"; connectMode -> "Теперь выбери вторую фигуру"; else -> "Перетаскивай фигуры. Нажми на пустое место, чтобы добавить новую." },
                 color = muted, fontSize = 11.sp, modifier = Modifier.weight(1f))
             TextButton(onClick = {
                 selectedId?.let { id -> doc = doc.copy(nodes = doc.nodes.filterNot { it.id == id }, links = doc.links.filterNot { it.from == id || it.to == id }); selectedId = null }
