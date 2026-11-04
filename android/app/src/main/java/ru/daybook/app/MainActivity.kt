@@ -495,22 +495,52 @@ private fun DaybookApp(
                                 horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                                 @Composable fun FormatButton(label: String, prefix: String, suffix: String = prefix, linePrefix: Boolean = false) {
                                     TextButton(onClick = {
-                                        val text = bodyValue.text
-                                        val cursor = bodyValue.selection.min.coerceIn(0, text.length)
+                                        val source = bodyValue.text
+                                        val selectionStart = bodyValue.selection.min.coerceIn(0, source.length)
+                                        val selectionEnd = bodyValue.selection.max.coerceIn(selectionStart, source.length)
                                         if (linePrefix) {
-                                            val lineStart = (text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)) + 1).coerceAtMost(cursor)
-                                            val alreadyApplied = text.startsWith(prefix, lineStart)
-                                            val updated = if (alreadyApplied) text.removeRange(lineStart, lineStart + prefix.length)
-                                                else text.substring(0, lineStart) + prefix + text.substring(lineStart)
-                                            val nextCursor = (cursor + if (alreadyApplied) -prefix.length else prefix.length).coerceIn(0, updated.length)
-                                            bodyValue = TextFieldValue(updated, TextRange(nextCursor))
+                                            val firstLine = source.lastIndexOf('\n', (selectionStart - 1).coerceAtLeast(0)) + 1
+                                            val lastSelectedPosition = if (selectionEnd > selectionStart) selectionEnd - 1 else selectionStart
+                                            val lastLineEnd = source.indexOf('\n', lastSelectedPosition).let { if (it < 0) source.length else it }
+                                            val lineStarts = mutableListOf(firstLine)
+                                            var scan = firstLine
+                                            while (scan < lastLineEnd) {
+                                                val nextNewline = source.indexOf('\n', scan)
+                                                if (nextNewline < 0 || nextNewline + 1 >= lastLineEnd) break
+                                                scan = nextNewline + 1
+                                                lineStarts.add(scan)
+                                            }
+                                            val remove = lineStarts.all { source.startsWith(prefix, it) }
+                                            val updated = StringBuilder(source)
+                                            lineStarts.asReversed().forEach { line ->
+                                                if (remove) updated.delete(line, line + prefix.length)
+                                                else updated.insert(line, prefix)
+                                            }
+                                            val delta = if (remove) -prefix.length else prefix.length
+                                            fun shifted(position: Int): Int {
+                                                val changesBefore = lineStarts.count { it <= position } * delta
+                                                return (position + changesBefore).coerceIn(0, updated.length)
+                                            }
+                                            val newStart = shifted(selectionStart)
+                                            val newEnd = shifted(selectionEnd)
+                                            bodyValue = TextFieldValue(updated.toString(), TextRange(newStart, newEnd))
+                                        } else if (selectionStart == selectionEnd) {
+                                            val inserted = prefix + suffix
+                                            val updated = source.substring(0, selectionStart) + inserted + source.substring(selectionEnd)
+                                            bodyValue = TextFieldValue(updated, TextRange(selectionStart + prefix.length))
                                         } else {
-                                            val startIndex = bodyValue.selection.min.coerceIn(0, text.length)
-                                            val endIndex = bodyValue.selection.max.coerceIn(startIndex, text.length)
-                                            val selected = text.substring(startIndex, endIndex).ifEmpty { "текст" }
-                                            val inserted = prefix + selected + suffix
-                                            val updated = text.replaceRange(startIndex, endIndex, inserted)
-                                            bodyValue = TextFieldValue(updated, TextRange(startIndex + inserted.length))
+                                            val isWrapped = source.startsWith(prefix, selectionStart) &&
+                                                source.substring(selectionEnd).startsWith(suffix) &&
+                                                selectionEnd + suffix.length <= source.length
+                                            if (isWrapped) {
+                                                val updated = source.removeRange(selectionEnd, selectionEnd + suffix.length)
+                                                    .removeRange(selectionStart, selectionStart + prefix.length)
+                                                bodyValue = TextFieldValue(updated, TextRange(selectionStart, selectionEnd - prefix.length - suffix.length))
+                                            } else {
+                                                val selected = source.substring(selectionStart, selectionEnd)
+                                                val updated = source.substring(0, selectionStart) + prefix + selected + suffix + source.substring(selectionEnd)
+                                                bodyValue = TextFieldValue(updated, TextRange(selectionStart + prefix.length, selectionEnd + prefix.length))
+                                            }
                                         }
                                     }) { Text(label, color = accent, style = MaterialTheme.typography.labelLarge) }
                                 }
