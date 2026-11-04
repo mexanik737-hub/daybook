@@ -491,23 +491,37 @@ private fun DaybookApp(
                             textStyle = MaterialTheme.typography.headlineSmall.copy(color = ink), singleLine = true, shape = RoundedCornerShape(14.dp))
                         if (editorKind == "note") {
                             Spacer(Modifier.height(10.dp))
-                            Row(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Color(0xFF211C30), RoundedCornerShape(14.dp)).padding(5.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly) {
-                                @Composable fun FormatButton(label: String, prefix: String, suffix: String = prefix) {
+                            Row(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Color(0xFF211C30), RoundedCornerShape(14.dp)).padding(horizontal = 4.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                                @Composable fun FormatButton(label: String, prefix: String, suffix: String = prefix, linePrefix: Boolean = false) {
                                     TextButton(onClick = {
-                                        val startIndex = bodyValue.selection.min.coerceIn(0, bodyValue.text.length)
-                                        val endIndex = bodyValue.selection.max.coerceIn(startIndex, bodyValue.text.length)
-                                        val selected = bodyValue.text.substring(startIndex, endIndex).ifEmpty { "текст" }
-                                        val inserted = prefix + selected + suffix
-                                        val updated = bodyValue.text.replaceRange(startIndex, endIndex, inserted)
-                                        bodyValue = TextFieldValue(updated, TextRange(startIndex + inserted.length))
+                                        val text = bodyValue.text
+                                        val cursor = bodyValue.selection.min.coerceIn(0, text.length)
+                                        if (linePrefix) {
+                                            val lineStart = (text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)) + 1).coerceAtMost(cursor)
+                                            val alreadyApplied = text.startsWith(prefix, lineStart)
+                                            val updated = if (alreadyApplied) text.removeRange(lineStart, lineStart + prefix.length)
+                                                else text.substring(0, lineStart) + prefix + text.substring(lineStart)
+                                            val nextCursor = (cursor + if (alreadyApplied) -prefix.length else prefix.length).coerceIn(0, updated.length)
+                                            bodyValue = TextFieldValue(updated, TextRange(nextCursor))
+                                        } else {
+                                            val startIndex = bodyValue.selection.min.coerceIn(0, text.length)
+                                            val endIndex = bodyValue.selection.max.coerceIn(startIndex, text.length)
+                                            val selected = text.substring(startIndex, endIndex).ifEmpty { "текст" }
+                                            val inserted = prefix + selected + suffix
+                                            val updated = text.replaceRange(startIndex, endIndex, inserted)
+                                            bodyValue = TextFieldValue(updated, TextRange(startIndex + inserted.length))
+                                        }
                                     }) { Text(label, color = accent, style = MaterialTheme.typography.labelLarge) }
                                 }
                                 FormatButton("B", "**")
                                 FormatButton("I", "_")
-                                FormatButton("H", "## ", "")
-                                FormatButton("•", "- ", "")
-                                FormatButton("☑", "- [ ] ", "")
+                                FormatButton("S", "~~")
+                                FormatButton("</>", "`")
+                                FormatButton("H", "## ", "", true)
+                                FormatButton("❝", "> ", "", true)
+                                FormatButton("•", "- ", "", true)
+                                FormatButton("☑", "- [ ] ", "", true)
                             }
                         }
                         Spacer(Modifier.height(12.dp))
