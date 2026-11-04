@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextDecoration
@@ -558,6 +559,57 @@ private fun DaybookApp(
                                 FormatButton("❝", "> ", "", true)
                                 FormatButton("•", "- ", "", true)
                                 FormatButton("☑", "- [ ] ", "", true)
+                            }
+                        }
+                        val checklistItems = if (editorKind == "note") NoteChecklist.parse(bodyValue.text) else emptyList()
+                        if (checklistItems.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = androidx.compose.ui.graphics.Color(0xFF211C30),
+                                shape = RoundedCornerShape(14.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0x30FFFFFF))
+                            ) {
+                                Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        val completedItems = checklistItems.count { it.checked }
+                                        Text("Чек-лист", color = ink, style = MaterialTheme.typography.labelLarge)
+                                        Text("$completedItems / ${checklistItems.size}", color = accent, style = MaterialTheme.typography.labelSmall)
+                                        TextButton(onClick = {
+                                            val updated = NoteChecklist.appendItem(bodyValue.text)
+                                            bodyValue = TextFieldValue(updated, TextRange(updated.length))
+                                        }) { Text("+ пункт", color = accent) }
+                                    }
+                                    Column(
+                                        Modifier.fillMaxWidth().heightIn(max = 144.dp).verticalScroll(rememberScrollState())
+                                    ) {
+                                        checklistItems.forEach { item ->
+                                            Row(
+                                                Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Checkbox(
+                                                    checked = item.checked,
+                                                    onCheckedChange = {
+                                                        bodyValue = bodyValue.copy(text = NoteChecklist.toggleLine(bodyValue.text, item.lineStart))
+                                                    },
+                                                    colors = CheckboxDefaults.colors(checkedColor = accent)
+                                                )
+                                                Text(
+                                                    item.text.ifBlank { "Без названия" },
+                                                    color = if (item.checked) muted else ink,
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        textDecoration = if (item.checked) TextDecoration.LineThrough else TextDecoration.None
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                         Spacer(Modifier.height(12.dp))
