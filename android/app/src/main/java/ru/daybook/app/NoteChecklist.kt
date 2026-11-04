@@ -18,7 +18,7 @@ object NoteChecklist {
         val result = mutableListOf<NoteChecklistItem>()
         var lineStart = 0
         while (lineStart <= body.length) {
-            val lineEnd = body.indexOf('\\n', lineStart).let { if (it < 0) body.length else it }
+            val lineEnd = body.indexOf('\n', lineStart).let { if (it < 0) body.length else it }
             val line = body.substring(lineStart, lineEnd)
             val match = itemPattern.matchEntire(line)
             if (match != null) {
@@ -36,7 +36,7 @@ object NoteChecklist {
 
     fun toggleLine(body: String, lineStart: Int): String {
         if (lineStart !in 0..body.length) return body
-        val lineEnd = body.indexOf('\\n', lineStart).let { if (it < 0) body.length else it }
+        val lineEnd = body.indexOf('\n', lineStart).let { if (it < 0) body.length else it }
         val line = body.substring(lineStart, lineEnd)
         val match = itemPattern.matchEntire(line) ?: return body
         val markerIndex = lineStart + match.groupValues[1].length + 3
@@ -47,7 +47,7 @@ object NoteChecklist {
 
     fun appendItem(body: String): String = when {
         body.isEmpty() -> "- [ ] "
-        body.endsWith('\\n') -> body + "- [ ] "
-        else -> body + "\\n- [ ] "
+        body.endsWith('\n') -> body + "- [ ] "
+        else -> body + "\n- [ ] "
     }
 }
