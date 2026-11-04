@@ -35,7 +35,9 @@ data class BoardNode(
     val y: Float,
     val label: String,
     val shape: String = "rounded",
-    val color: Long = 0xFF7047D8
+    val color: Long = 0xFF7047D8,
+    val width: Float = 128f,
+    val height: Float = 76f
 )
 
 @Serializable
@@ -103,7 +105,7 @@ fun BoardEditor(
         )
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            listOf("rounded" to "Блок", "circle" to "Круг", "diamond" to "Ромб").forEach { (shape, label) ->
+            listOf("rounded" to "Блок", "rect" to "Квадрат", "circle" to "Круг", "diamond" to "Ромб", "text" to "Текст").forEach { (shape, label) ->
                 FilterChip(selected = addShape == shape && !connectMode && !panMode, onClick = { addShape = shape; connectMode = false; connectFrom = null; panMode = false },
                     label = { Text(label) })
             }
@@ -141,7 +143,7 @@ fun BoardEditor(
                 .pointerInput(Unit) {
                     detectTapGestures { point ->
                         val world = Offset((point.x - latestPan.x) / latestZoom, (point.y - latestPan.y) / latestZoom)
-                        val hit = latestDoc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
+                        val hit = latestDoc.nodes.lastOrNull { abs(world.x - it.x) <= it.width / 2f && abs(world.y - it.y) <= it.height / 2f }
                         when {
                             latestPanMode -> { selectedId = null; selectedLinkIndex = null }
                             latestConnectMode && hit != null -> {
@@ -200,7 +202,7 @@ fun BoardEditor(
                         } else if (!latestConnectMode) {
                             val activeId = latestSelectedId ?: run {
                                 val world = Offset((centroid.x - latestPan.x) / latestZoom, (centroid.y - latestPan.y) / latestZoom)
-                                latestDoc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
+                                latestDoc.nodes.lastOrNull { abs(world.x - it.x) <= it.width / 2f && abs(world.y - it.y) <= it.height / 2f }
                                     ?.id?.also { selectedId = it; selectedLinkIndex = null }
                             }
                             if (activeId != null) {
@@ -264,7 +266,8 @@ fun BoardEditor(
                 }
                 doc.nodes.forEach { node ->
                     val p = screen(node)
-                    val w = 128f * zoom; val h = 76f * zoom
+                    val w = node.width * zoom
+                    val h = node.height * zoom
                     val color = Color(node.color)
                     val topLeft = Offset(p.x - w / 2, p.y - h / 2)
                     when (node.shape) {
@@ -273,6 +276,8 @@ fun BoardEditor(
                             val path = Path().apply { moveTo(p.x, p.y-h/2); lineTo(p.x+w/2,p.y); lineTo(p.x,p.y+h/2); lineTo(p.x-w/2,p.y); close() }
                             drawPath(path, color)
                         }
+                        "rect" -> drawRect(color, topLeft, Size(w,h))
+                        "text" -> Unit
                         else -> drawRoundRect(color, topLeft, Size(w,h), androidx.compose.ui.geometry.CornerRadius(18f * zoom))
                     }
                     if (node.id == selectedId) drawRoundRect(accent, topLeft, Size(w,h), androidx.compose.ui.geometry.CornerRadius(18f * zoom), style = Stroke(3f))
@@ -282,6 +287,7 @@ fun BoardEditor(
                             textSize = 13f * zoom
                             textAlign = android.graphics.Paint.Align.CENTER
                             isAntiAlias = true
+                            if (node.shape == "text") color = android.graphics.Color.rgb(230, 224, 255)
                         }
                         drawText(node.label.take(18), p.x, p.y + 5f * zoom, paint)
                     }
@@ -302,13 +308,24 @@ fun BoardEditor(
         }
         val selected = doc.nodes.firstOrNull { it.id == selectedId }
         if (selected != null) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = selected.label, onValueChange = { value ->
-                    doc = doc.copy(nodes = doc.nodes.map { if (it.id == selected.id) it.copy(label = value) else it })
-                }, modifier = Modifier.weight(1f), singleLine = true, label = { Text("Текст блока") })
-                listOf(0xFF7047D8L, 0xFF356C91L, 0xFF477A5BL, 0xFF9A633EL).forEach { color ->
-                    Surface(onClick = { doc = doc.copy(nodes = doc.nodes.map { if (it.id == selected.id) it.copy(color = color) else it }) },
-                        modifier = Modifier.size(27.dp), shape = RoundedCornerShape(50), color = Color(color)) {}
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = selected.label, onValueChange = { value ->
+                        doc = doc.copy(nodes = doc.nodes.map { if (it.id == selected.id) it.copy(label = value) else it })
+                    }, modifier = Modifier.weight(1f), singleLine = true, label = { Text("Текст фигуры") })
+                    listOf(0xFF7047D8L, 0xFF356C91L, 0xFF477A5BL, 0xFF9A633EL).forEach { color ->
+                        Surface(onClick = { doc = doc.copy(nodes = doc.nodes.map { if (it.id == selected.id) it.copy(color = color) else it }) },
+                            modifier = Modifier.size(27.dp), shape = RoundedCornerShape(50), color = Color(color)) {}
+                    }
+                }
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Размер", color = muted, fontSize = 11.sp)
+                    TextButton(onClick = { doc = doc.copy(nodes = doc.nodes.map { if (it.id == selected.id) it.copy(width = (it.width - 16f).coerceAtLeast(64f)) else it }) }) { Text("Ш −", color = accent) }
+                    Text("${selected.width.toInt()} px", color = muted, fontSize = 11.sp)
+                    TextButton(onClick = { doc = doc.copy(nodes = doc.nodes.map { if (it.id == selected.id) it.copy(width = (it.width + 16f).coerceAtMost(320f)) else it }) }) { Text("Ш +", color = accent) }
+                    TextButton(onClick = { doc = doc.copy(nodes = doc.nodes.map { if (it.id == selected.id) it.copy(height = (it.height - 12f).coerceAtLeast(44f)) else it }) }) { Text("В −", color = accent) }
+                    Text("${selected.height.toInt()} px", color = muted, fontSize = 11.sp)
+                    TextButton(onClick = { doc = doc.copy(nodes = doc.nodes.map { if (it.id == selected.id) it.copy(height = (it.height + 12f).coerceAtMost(240f)) else it }) }) { Text("В +", color = accent) }
                 }
             }
         }
