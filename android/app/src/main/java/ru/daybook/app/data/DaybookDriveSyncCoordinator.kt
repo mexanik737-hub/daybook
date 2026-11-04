@@ -168,15 +168,15 @@ class DaybookDriveSyncCoordinator(
             }
         }
 
-        val merge = mergeBoards(baseline.boards, local, remote.boards)
-        if (merge.second.isNotEmpty()) {
+        val merge = DaybookBoardSyncMerger.merge(baseline.boards, local, remote.boards)
+        if (!merge.succeeded || merge.boards == null) {
             return Result(
                 "conflict",
                 "Одна или несколько схем изменены на разных устройствах. Локальные изменения сохранены; автоматическая запись остановлена.",
-                merge.second
+                merge.conflicts
             )
         }
-        val merged = BoardSyncDocument(merge.first.sortedBy { it.id })
+        val merged = BoardSyncDocument(merge.boards)
         if (local != merged.boards) repository.importBoards(merged.boards)
         var finalFile = remoteFile
         if (remote.boards != merged.boards) {
@@ -208,39 +208,6 @@ class DaybookDriveSyncCoordinator(
 
     private fun encodeBoards(document: BoardSyncDocument): String =
         DaybookJson.format.encodeToString(document)
-
-    private fun mergeBoards(
-        base: List<DaybookEntry>,
-        local: List<DaybookEntry>,
-        remote: List<DaybookEntry>
-    ): Pair<List<DaybookEntry>, List<String>> {
-        val baseMap = base.associateBy { it.id }
-        val localMap = local.associateBy { it.id }
-        val remoteMap = remote.associateBy { it.id }
-        val ids = linkedSetOf<String>().apply {
-            addAll(baseMap.keys)
-            addAll(localMap.keys)
-            addAll(remoteMap.keys)
-        }
-        val merged = mutableListOf<DaybookEntry>()
-        val conflicts = mutableListOf<String>()
-        ids.forEach { id ->
-            val before = baseMap[id]
-            val localValue = localMap[id]
-            val remoteValue = remoteMap[id]
-            val chosen = when {
-                localValue == remoteValue -> localValue
-                localValue == before -> remoteValue
-                remoteValue == before -> localValue
-                else -> {
-                    conflicts += "board:$id"
-                    null
-                }
-            }
-            if (chosen != null) merged += chosen
-        }
-        return merged to conflicts
-    }
 
     private fun saveBaseline(fileId: String, document: DaybookDocument) {
         stateStore.save(fileId, DaybookJson.encode(normalize(document)))
