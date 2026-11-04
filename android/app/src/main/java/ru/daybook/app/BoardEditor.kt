@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -68,6 +69,7 @@ fun BoardEditor(
         mutableStateOf(runCatching { boardJson.decodeFromString<BoardDocument>(initialJson) }.getOrDefault(BoardDocument()))
     }
     var selectedId by remember { mutableStateOf<String?>(null) }
+    var selectedLinkIndex by remember { mutableStateOf<Int?>(null) }
     var connectFrom by remember { mutableStateOf<String?>(null) }
     var connectMode by remember { mutableStateOf(false) }
     var panMode by remember { mutableStateOf(false) }
@@ -134,25 +136,55 @@ fun BoardEditor(
                         val world = Offset((point.x - pan.x) / zoom, (point.y - pan.y) / zoom)
                         val hit = doc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
                         when {
-                            panMode -> selectedId = null
+                            panMode -> { selectedId = null; selectedLinkIndex = null }
                             connectMode && hit != null -> {
                                 val from = connectFrom
                                 if (from == null) {
                                     connectFrom = hit.id
                                     selectedId = hit.id
+                                    selectedLinkIndex = null
                                 } else if (hit.id != from) {
                                     val exists = doc.links.any { (it.from == from && it.to == hit.id) || (it.from == hit.id && it.to == from) }
                                     if (!exists) doc = doc.copy(links = doc.links + BoardLink(from, hit.id, style = linkStyle, color = linkColor, arrowEnd = linkArrow))
                                     connectFrom = null
                                     selectedId = hit.id
+                                    selectedLinkIndex = null
                                 }
                             }
-                            !connectMode && !panMode && hit != null -> selectedId = hit.id
+                            !connectMode && !panMode && hit != null -> { selectedId = hit.id; selectedLinkIndex = null }
                             !connectMode && !panMode -> {
-                                val node = BoardNode(x = world.x, y = world.y, label = "Новый блок", shape = addShape)
-                                doc = doc.copy(nodes = doc.nodes + node)
-                                selectedId = node.id
+                                val linkHit = doc.links.indices.lastOrNull { index ->
+                                    val link = doc.links[index]
+                                    val fromNode = doc.nodes.firstOrNull { it.id == link.from }
+                                    val toNode = doc.nodes.firstOrNull { it.id == link.to }
+                                    fromNode != null && toNode != null && pointNearLink(
+                                        point,
+                                        Offset(fromNode.x * zoom + pan.x, fromNode.y * zoom + pan.y),
+                                        Offset(toNode.x * zoom + pan.x, toNode.y * zoom + pan.y),
+                                        link.style, 14f
+                                    )
+                                }
+                                if (linkHit != null) {
+                                    selectedId = null
+                                    selectedLinkIndex = linkHit
+                                } else {
+                                    val node = BoardNode(x = world.x, y = world.y, label = "Новый блок", shape = addShape)
+                                    doc = doc.copy(nodes = doc.nodes + node)
+                                    selectedId = node.id
+                                    selectedLinkIndex = null
+                                }
                             }
+                        }
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTransformGestures { centroid, _, zoomChange, _ ->
+                        if (zoomChange != 1f) {
+                            val nextZoom = (zoom * zoomChange).coerceIn(0.35f, 4f)
+                            val scale = nextZoom / zoom
+                            pan = Offset(centroid.x - (centroid.x - pan.x) * scale, centroid.y - (centroid.y - pan.y) * scale)
+                            zoom = nextZoom
+                            selectedLinkIndex = null
                         }
                     }
                 }
@@ -205,13 +237,14 @@ fun BoardEditor(
                         else -> null
                     }
                     val lineColor = Color(link.color)
-                    if (control == null) drawLine(lineColor, start, end, 2.5f)
+                    val lineWidth = if (doc.links.indexOf(link) == selectedLinkIndex) 4.5f else 2.5f
+                    if (control == null) drawLine(lineColor, start, end, lineWidth)
                     else {
                         val curve = Path().apply {
                             moveTo(start.x, start.y)
                             quadraticTo(control.x, control.y, end.x, end.y)
                         }
-                        drawPath(curve, lineColor, style = Stroke(width = 2.5f))
+                        drawPath(curve, lineColor, style = Stroke(width = lineWidth))
                     }
                     if (link.arrowEnd) {
                         val tangent = if (control == null) Offset(dx, dy) else Offset(end.x - control.x, end.y - control.y)
@@ -275,5 +308,57 @@ fun BoardEditor(
                 }
             }
         }
+
+        val selectedLink = selectedLinkIndex?.let { doc.links.getOrNull(it) }
+        if (selectedLink != null) {
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Связь", color = accent, fontSize = 12.sp)
+                listOf("straight" to "Прямая", "curved" to "Кривая", "arc" to "Дуга").forEach { (style, label) ->
+                    FilterChip(selected = selectedLink.style == style,
+                        onClick = { doc = doc.copy(links = doc.links.mapIndexed { index, link -> if (index == selectedLinkIndex) link.copy(style = style, curved = style != "straight") else link }) },
+                        label = { Text(label, fontSize = 11.sp) })
+                }
+                FilterChip(selected = selectedLink.arrowEnd,
+                    onClick = { doc = doc.copy(links = doc.links.mapIndexed { index, link -> if (index == selectedLinkIndex) link.copy(arrowEnd = !link.arrowEnd) else link }) },
+                    label = { Text(if (selectedLink.arrowEnd) "Со стрелкой" else "Без стрелки", fontSize = 11.sp) })
+                listOf(0xFFB69CFFL, 0xFF63B6E8L, 0xFF70C99AL, 0xFFE6A36AL, 0xFFE58D9BL).forEach { color ->
+                    Surface(onClick = { doc = doc.copy(links = doc.links.mapIndexed { index, link -> if (index == selectedLinkIndex) link.copy(color = color) else link }) },
+                        modifier = Modifier.size(24.dp), shape = RoundedCornerShape(50), color = Color(color),
+                        border = if (selectedLink.color == color) androidx.compose.foundation.BorderStroke(2.dp, Color.White) else null) {}
+                }
+                TextButton(onClick = { doc = doc.copy(links = doc.links.filterIndexed { index, _ -> index != selectedLinkIndex }); selectedLinkIndex = null }) {
+                    Text("Удалить связь", color = Color(0xFFE58D9B))
+                }
+            }
+        }
     }
+}
+
+private fun pointNearLink(point: Offset, start: Offset, end: Offset, style: String, tolerance: Float): Boolean {
+    val dx = end.x - start.x
+    val dy = end.y - start.y
+    val distance = kotlin.math.sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+    val normal = Offset(-dy / distance, dx / distance)
+    val bend = when (style) { "curved" -> 0.22f; "arc" -> 0.38f; else -> 0f }
+    val control = Offset((start.x + end.x) / 2f + normal.x * distance * bend,
+        (start.y + end.y) / 2f + normal.y * distance * bend)
+    var previous = start
+    for (step in 1..24) {
+        val t = step / 24f
+        val current = if (bend == 0f) Offset(start.x + dx * t, start.y + dy * t) else {
+            val inverse = 1f - t
+            Offset(inverse * inverse * start.x + 2f * inverse * t * control.x + t * t * end.x,
+                inverse * inverse * start.y + 2f * inverse * t * control.y + t * t * end.y)
+        }
+        val sx = current.x - previous.x
+        val sy = current.y - previous.y
+        val lengthSquared = sx * sx + sy * sy
+        val projection = if (lengthSquared == 0f) 0f else (((point.x - previous.x) * sx + (point.y - previous.y) * sy) / lengthSquared).coerceIn(0f, 1f)
+        val px = point.x - (previous.x + projection * sx)
+        val py = point.y - (previous.y + projection * sy)
+        if (px * px + py * py <= tolerance * tolerance) return true
+        previous = current
+    }
+    return false
 }
