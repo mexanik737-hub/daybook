@@ -81,6 +81,14 @@ fun BoardEditor(
     var editLabel by remember { mutableStateOf<String?>(null) }
     val accent = Color(0xFFB69CFF)
     val muted = Color(0xFFA7A69F)
+    val latestDoc by rememberUpdatedState(doc)
+    val latestZoom by rememberUpdatedState(zoom)
+    val latestPan by rememberUpdatedState(pan)
+    val latestConnectFrom by rememberUpdatedState(connectFrom)
+    val latestConnectMode by rememberUpdatedState(connectMode)
+    val latestPanMode by rememberUpdatedState(panMode)
+    val latestAddShape by rememberUpdatedState(addShape)
+    val latestSelectedId by rememberUpdatedState(selectedId)
 
     Column(Modifier.fillMaxSize().background(Color(0xFF111019)).padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -130,36 +138,36 @@ fun BoardEditor(
         }
         Box(Modifier.fillMaxWidth().weight(1f).background(Color(0xFF191622), RoundedCornerShape(18.dp))) {
             Canvas(Modifier.fillMaxSize()
-                .pointerInput(doc, zoom, pan, connectFrom, connectMode, panMode, addShape) {
+                .pointerInput(Unit) {
                     detectTapGestures { point ->
-                        val world = Offset((point.x - pan.x) / zoom, (point.y - pan.y) / zoom)
-                        val hit = doc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
+                        val world = Offset((point.x - latestPan.x) / latestZoom, (point.y - latestPan.y) / latestZoom)
+                        val hit = latestDoc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
                         when {
-                            panMode -> { selectedId = null; selectedLinkIndex = null }
-                            connectMode && hit != null -> {
-                                val from = connectFrom
+                            latestPanMode -> { selectedId = null; selectedLinkIndex = null }
+                            latestConnectMode && hit != null -> {
+                                val from = latestConnectFrom
                                 if (from == null) {
                                     connectFrom = hit.id
                                     selectedId = hit.id
                                     selectedLinkIndex = null
                                 } else if (hit.id != from) {
-                                    val exists = doc.links.any { (it.from == from && it.to == hit.id) || (it.from == hit.id && it.to == from) }
-                                    if (!exists) doc = doc.copy(links = doc.links + BoardLink(from, hit.id, style = linkStyle, color = linkColor, arrowEnd = linkArrow))
+                                    val exists = latestDoc.links.any { (it.from == from && it.to == hit.id) || (it.from == hit.id && it.to == from) }
+                                    if (!exists) doc = latestDoc.copy(links = latestDoc.links + BoardLink(from, hit.id, style = linkStyle, color = linkColor, arrowEnd = linkArrow))
                                     connectFrom = null
                                     selectedId = hit.id
                                     selectedLinkIndex = null
                                 }
                             }
-                            !connectMode && !panMode && hit != null -> { selectedId = hit.id; selectedLinkIndex = null }
-                            !connectMode && !panMode -> {
-                                val linkHit = doc.links.indices.lastOrNull { index ->
-                                    val link = doc.links[index]
-                                    val fromNode = doc.nodes.firstOrNull { it.id == link.from }
-                                    val toNode = doc.nodes.firstOrNull { it.id == link.to }
+                            !latestConnectMode && !panMode && hit != null -> { selectedId = hit.id; selectedLinkIndex = null }
+                            !latestConnectMode && !latestPanMode -> {
+                                val linkHit = latestDoc.links.indices.lastOrNull { index ->
+                                    val link = latestDoc.links[index]
+                                    val fromNode = latestDoc.nodes.firstOrNull { it.id == link.from }
+                                    val toNode = latestDoc.nodes.firstOrNull { it.id == link.to }
                                     fromNode != null && toNode != null && pointNearLink(
                                         point,
-                                        Offset(fromNode.x * zoom + pan.x, fromNode.y * zoom + pan.y),
-                                        Offset(toNode.x * zoom + pan.x, toNode.y * zoom + pan.y),
+                                        Offset(fromNode.x * latestZoom + latestPan.x, fromNode.y * latestZoom + latestPan.y),
+                                        Offset(toNode.x * latestZoom + latestPan.x, toNode.y * latestZoom + latestPan.y),
                                         link.style, 14f
                                     )
                                 }
@@ -167,8 +175,8 @@ fun BoardEditor(
                                     selectedId = null
                                     selectedLinkIndex = linkHit
                                 } else {
-                                    val node = BoardNode(x = world.x, y = world.y, label = "Новый блок", shape = addShape)
-                                    doc = doc.copy(nodes = doc.nodes + node)
+                                    val node = BoardNode(x = world.x, y = world.y, label = "Новый блок", shape = latestAddShape)
+                                    doc = latestDoc.copy(nodes = latestDoc.nodes + node)
                                     selectedId = node.id
                                     selectedLinkIndex = null
                                 }
@@ -176,30 +184,30 @@ fun BoardEditor(
                         }
                     }
                 }
-                .pointerInput(doc, zoom, pan, panMode, connectMode, selectedId) {
+                .pointerInput(Unit) {
                     detectTransformGestures { centroid, panChange, zoomChange, _ ->
                         if (zoomChange != 1f) {
-                            val nextZoom = (zoom * zoomChange).coerceIn(0.35f, 4f)
-                            val scale = nextZoom / zoom
+                            val nextZoom = (latestZoom * zoomChange).coerceIn(0.35f, 4f)
+                            val scale = nextZoom / latestZoom
                             pan = Offset(
-                                centroid.x - (centroid.x - pan.x) * scale + panChange.x,
-                                centroid.y - (centroid.y - pan.y) * scale + panChange.y
+                                centroid.x - (centroid.x - latestPan.x) * scale + panChange.x,
+                                centroid.y - (centroid.y - latestPan.y) * scale + panChange.y
                             )
                             zoom = nextZoom
                             selectedLinkIndex = null
-                        } else if (panMode) {
+                        } else if (latestPanMode) {
                             pan += panChange
-                        } else if (!connectMode) {
-                            val activeId = selectedId ?: run {
-                                val world = Offset((centroid.x - pan.x) / zoom, (centroid.y - pan.y) / zoom)
-                                doc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
+                        } else if (!latestConnectMode) {
+                            val activeId = latestSelectedId ?: run {
+                                val world = Offset((centroid.x - latestPan.x) / zoom, (centroid.y - latestPan.y) / zoom)
+                                latestDoc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
                                     ?.id?.also { selectedId = it; selectedLinkIndex = null }
                             }
                             if (activeId != null) {
-                                doc = doc.copy(nodes = doc.nodes.map { node ->
+                                doc = latestDoc.copy(nodes = latestDoc.nodes.map { node ->
                                     if (node.id == activeId) node.copy(
-                                        x = node.x + panChange.x / zoom,
-                                        y = node.y + panChange.y / zoom
+                                        x = node.x + panChange.x / latestZoom,
+                                        y = node.y + panChange.y / latestZoom
                                     ) else node
                                 })
                             }
