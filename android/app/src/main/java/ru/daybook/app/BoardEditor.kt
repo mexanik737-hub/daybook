@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -177,39 +176,36 @@ fun BoardEditor(
                         }
                     }
                 }
-                .pointerInput(Unit) {
-                    detectTransformGestures { centroid, _, zoomChange, _ ->
+                .pointerInput(doc, zoom, pan, panMode, connectMode, selectedId) {
+                    detectTransformGestures { centroid, panChange, zoomChange, _ ->
                         if (zoomChange != 1f) {
                             val nextZoom = (zoom * zoomChange).coerceIn(0.35f, 4f)
                             val scale = nextZoom / zoom
-                            pan = Offset(centroid.x - (centroid.x - pan.x) * scale, centroid.y - (centroid.y - pan.y) * scale)
+                            pan = Offset(
+                                centroid.x - (centroid.x - pan.x) * scale + panChange.x,
+                                centroid.y - (centroid.y - pan.y) * scale + panChange.y
+                            )
                             zoom = nextZoom
                             selectedLinkIndex = null
+                        } else if (panMode) {
+                            pan += panChange
+                        } else if (!connectMode) {
+                            val activeId = selectedId ?: run {
+                                val world = Offset((centroid.x - pan.x) / zoom, (centroid.y - pan.y) / zoom)
+                                doc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
+                                    ?.id?.also { selectedId = it; selectedLinkIndex = null }
+                            }
+                            if (activeId != null) {
+                                doc = doc.copy(nodes = doc.nodes.map { node ->
+                                    if (node.id == activeId) node.copy(
+                                        x = node.x + panChange.x / zoom,
+                                        y = node.y + panChange.y / zoom
+                                    ) else node
+                                })
+                            }
                         }
                     }
                 }
-                .pointerInput(doc, zoom, pan, panMode, connectMode, selectedId) {
-                detectDragGestures(
-                    onDragStart = { point ->
-                        val world = Offset((point.x - pan.x) / zoom, (point.y - pan.y) / zoom)
-                        val hit = doc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
-                        if (panMode) {
-                            selectedId = null
-                        } else if (!connectMode && hit != null) {
-                            selectedId = hit.id
-                        }
-                    },
-                    onDrag = { change, delta ->
-                        change.consume()
-                        if (panMode) {
-                            pan += delta
-                        } else if (!connectMode && selectedId != null) {
-                            doc = doc.copy(nodes = doc.nodes.map {
-                                if (it.id == selectedId) it.copy(x = it.x + delta.x / zoom, y = it.y + delta.y / zoom) else it
-                            })
-                        }
-                    }
-                )
             }) {
                 val grid = 28.dp.toPx() * zoom
                 var x = (pan.x % grid)
