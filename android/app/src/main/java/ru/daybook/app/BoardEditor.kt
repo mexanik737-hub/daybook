@@ -216,7 +216,7 @@ fun BoardEditor(
                         }
                     }
                 }
-            }) {
+            ) {
                 val grid = 28.dp.toPx() * zoom
                 var x = (pan.x % grid)
                 while (x < size.width) {
