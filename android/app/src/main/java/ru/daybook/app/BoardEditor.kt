@@ -158,7 +158,7 @@ fun BoardEditor(
                                     selectedLinkIndex = null
                                 }
                             }
-                            !latestConnectMode && !panMode && hit != null -> { selectedId = hit.id; selectedLinkIndex = null }
+                            !latestConnectMode && !latestPanMode && hit != null -> { selectedId = hit.id; selectedLinkIndex = null }
                             !latestConnectMode && !latestPanMode -> {
                                 val linkHit = latestDoc.links.indices.lastOrNull { index ->
                                     val link = latestDoc.links[index]
@@ -199,7 +199,7 @@ fun BoardEditor(
                             pan += panChange
                         } else if (!latestConnectMode) {
                             val activeId = latestSelectedId ?: run {
-                                val world = Offset((centroid.x - latestPan.x) / zoom, (centroid.y - latestPan.y) / zoom)
+                                val world = Offset((centroid.x - latestPan.x) / latestZoom, (centroid.y - latestPan.y) / latestZoom)
                                 latestDoc.nodes.lastOrNull { abs(world.x - it.x) <= 64 && abs(world.y - it.y) <= 38 }
                                     ?.id?.also { selectedId = it; selectedLinkIndex = null }
                             }
