@@ -8,7 +8,7 @@ import org.junit.Test
 class NoteChecklistTest {
     @Test
     fun parsesChecklistItemsAndTheirOffsets() {
-        val body = "Заголовок\\n- [ ] Купить молоко\\n  - [x] Позвонить"
+        val body = "Заголовок\n- [ ] Купить молоко\n  - [x] Позвонить"
 
         val items = NoteChecklist.parse(body)
 
@@ -22,26 +22,26 @@ class NoteChecklistTest {
 
     @Test
     fun togglesOnlyTheRequestedItemAndPreservesOtherText() {
-        val body = "Заметка\\n- [ ] Первый пункт\\n- [x] Второй пункт"
+        val body = "Заметка\n- [ ] Первый пункт\n- [x] Второй пункт"
         val firstLine = body.indexOf("- [ ]")
         val secondLine = body.indexOf("- [x]")
 
         val afterFirstToggle = NoteChecklist.toggleLine(body, firstLine)
         val afterSecondToggle = NoteChecklist.toggleLine(afterFirstToggle, secondLine)
 
-        assertEquals("Заметка\\n- [x] Первый пункт\\n- [ ] Второй пункт", afterSecondToggle)
+        assertEquals("Заметка\n- [x] Первый пункт\n- [ ] Второй пункт", afterSecondToggle)
     }
 
     @Test
     fun appendsChecklistItemWithoutLosingExistingText() {
         assertEquals("- [ ] ", NoteChecklist.appendItem(""))
-        assertEquals("Заметка\\n- [ ] ", NoteChecklist.appendItem("Заметка"))
-        assertEquals("Заметка\\n- [ ] ", NoteChecklist.appendItem("Заметка\\n"))
+        assertEquals("Заметка\n- [ ] ", NoteChecklist.appendItem("Заметка"))
+        assertEquals("Заметка\n- [ ] ", NoteChecklist.appendItem("Заметка\n"))
     }
 
     @Test
     fun ignoresOrdinaryBulletsAndInvalidOffsets() {
-        val body = "- обычный пункт\\nпросто текст"
+        val body = "- обычный пункт\nпросто текст"
 
         assertTrue(NoteChecklist.parse(body).isEmpty())
         assertEquals(body, NoteChecklist.toggleLine(body, 0))
