@@ -499,7 +499,7 @@ private fun DaybookApp(
                                         val selectionStart = bodyValue.selection.min.coerceIn(0, source.length)
                                         val selectionEnd = bodyValue.selection.max.coerceIn(selectionStart, source.length)
                                         if (linePrefix) {
-                                            val firstLine = source.lastIndexOf('\n', (selectionStart - 1).coerceAtLeast(0)) + 1
+                                            val firstLine = source.lastIndexOf('\n', selectionStart - 1) + 1
                                             val lastSelectedPosition = if (selectionEnd > selectionStart) selectionEnd - 1 else selectionStart
                                             val lastLineEnd = source.indexOf('\n', lastSelectedPosition).let { if (it < 0) source.length else it }
                                             val lineStarts = mutableListOf(firstLine)
