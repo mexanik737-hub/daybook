@@ -9,6 +9,7 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextDecoration
@@ -491,8 +492,8 @@ private fun DaybookApp(
                             textStyle = MaterialTheme.typography.headlineSmall.copy(color = ink), singleLine = true, shape = RoundedCornerShape(14.dp))
                         if (editorKind == "note") {
                             Spacer(Modifier.height(10.dp))
-                            Row(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Color(0xFF211C30), RoundedCornerShape(14.dp)).padding(horizontal = 4.dp, vertical = 2.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).background(androidx.compose.ui.graphics.Color(0xFF211C30), RoundedCornerShape(14.dp)).padding(horizontal = 4.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
                                 @Composable fun FormatButton(label: String, prefix: String, suffix: String = prefix, linePrefix: Boolean = false) {
                                     TextButton(onClick = {
                                         val source = bodyValue.text
