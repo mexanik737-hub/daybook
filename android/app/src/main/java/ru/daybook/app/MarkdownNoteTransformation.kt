@@ -59,8 +59,9 @@ class MarkdownNoteTransformation : VisualTransformation {
                     i += 2
                     continue
                 }
-                if (source[i] == '_' && (i == contentStart || !source[i - 1].isLetterOrDigit()) &&
-                    (i + 1 < newline && source[i + 1].isLetterOrDigit())) {
+                if (source[i] == '_' && (italicStart >= 0 ||
+                    ((i == contentStart || !source[i - 1].isLetterOrDigit()) &&
+                        i + 1 < newline && source[i + 1].isLetterOrDigit()))) {
                     if (italicStart < 0) italicStart = output.length else {
                         if (output.length > italicStart) spans.add(Triple(italicStart, output.length, SpanStyle(fontStyle = FontStyle.Italic)))
                         italicStart = -1
