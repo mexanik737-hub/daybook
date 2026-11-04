@@ -1,0 +1,73 @@
+<Window x:Class="Daybook.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Daybook" Height="760" Width="1180" MinHeight="600" MinWidth="900"
+        Background="{StaticResource WindowBackground}" Foreground="{StaticResource PrimaryText}">
+    <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="250"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="{StaticResource PanelBackground}" Padding="24">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top">
+                    <TextBlock Text="daybook" FontSize="27" FontWeight="SemiBold" Margin="0,0,0,34"/>
+                    <TextBlock Text="НАВИГАЦИЯ" Foreground="{StaticResource MutedText}" Margin="0,0,0,12"/>
+                    <Button Content="☑   Задачи" Click="ShowTasks_Click" Height="44" HorizontalContentAlignment="Left" Padding="12,0" Margin="0,0,0,8"/>
+                    <Button Content="▤   Заметки" Click="ShowNotes_Click" Height="44" HorizontalContentAlignment="Left" Padding="12,0"/>
+                    <Button Content="⌂   Все записи" Click="ShowAll_Click" Height="44" HorizontalContentAlignment="Left" Padding="12,0" Margin="0,8,0,0"/>
+                    <Button Content="☁   Google Drive" Click="DriveSettings_Click" Height="44" HorizontalContentAlignment="Left" Padding="12,0" Margin="0,18,0,0"/>
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Bottom" Text="Локальное хранение · офлайн-режим" Foreground="{StaticResource MutedText}" Margin="0,20,0,0" TextWrapping="Wrap"/>
+            </DockPanel>
+        </Border>
+        <Grid Grid.Column="1" Margin="42">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+            <StackPanel Margin="0,0,0,22">
+                <TextBlock Text="ТВОЙ ДЕНЬ" Foreground="{StaticResource MutedText}" FontSize="11" FontWeight="SemiBold"/>
+                <TextBlock x:Name="PageTitle" Text="Всё важное — в одном месте." FontSize="34" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                <TextBlock x:Name="DriveStatus" Text="Локальное хранение · офлайн-режим" Foreground="{StaticResource MutedText}" Margin="0,8,0,0" TextWrapping="Wrap"/><TextBox x:Name="SearchBox" Height="38" Margin="0,18,0,0" Padding="10,7" Background="{StaticResource PanelBackground}" Foreground="{StaticResource PrimaryText}" BorderBrush="#292E39" TextChanged="SearchBox_TextChanged" ToolTip="Поиск по записям"/>
+                <ComboBox x:Name="TaskFilter" Height="36" Margin="0,8,0,0" SelectedIndex="0"
+                          SelectionChanged="TaskFilter_SelectionChanged" Background="{StaticResource PanelBackground}"
+                          Foreground="{StaticResource PrimaryText}">
+                    <ComboBoxItem Content="Все задачи" Tag="all"/>
+                    <ComboBoxItem Content="Активные задачи" Tag="active"/>
+                    <ComboBoxItem Content="Выполненные задачи" Tag="done"/>
+                </ComboBox>
+                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                    <Button Content="+ Новая задача" Click="AddTask_Click" Height="38" Padding="14,0" Margin="0,0,8,0" Background="{StaticResource Accent}" Foreground="#111318" FontWeight="SemiBold"/>
+                    <Button Content="+ Новая заметка" Click="AddNote_Click" Height="38" Padding="14,0"/>
+                </StackPanel>
+            </StackPanel>
+            <ListBox x:Name="EntryList" Grid.Row="1" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="EntryList_MouseDoubleClick">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{StaticResource PanelBackground}" CornerRadius="12" Padding="16" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Body}" Foreground="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                    <TextBlock Text="{Binding Due, StringFormat=Срок: {0}}" Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,5,0,0"/>
+                                    <TextBlock Text="{Binding Priority, StringFormat=Приоритет: {0}}" Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,3,0,0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Content="✓" Tag="{Binding Id}" Click="ToggleDone_Click" Margin="0,0,6,0">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsTask}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                    <Button Content="Удалить" Tag="{Binding Id}" Click="Delete_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </Grid>
+</Window>

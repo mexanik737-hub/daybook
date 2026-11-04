@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Daybook data",
+  "type": "object",
+  "required": ["tasks", "notes"],
+  "properties": {
+    "tasks": { "type": "array", "items": { "$ref": "#/$defs/entry" } },
+    "notes": { "type": "array", "items": { "$ref": "#/$defs/entry" } }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "created": { "type": "integer" },
+        "updated": { "type": "integer" },
+        "due": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "normal", "high"] },
+        "done": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    }
+  }
+}
