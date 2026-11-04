@@ -54,12 +54,21 @@ class MarkdownNoteTransformation : VisualTransformation {
             var italicStart = -1
             var strikeStart = -1
             var codeStart = -1
+            var highlightStart = -1
+            var textColorStart = -1
+            var activeTextColor = Color(0xFFFFFFFF)
 
             while (i < newline) {
                 sourceToOutput[i] = output.length
                 val marker = when {
                     i + 1 < newline && source.startsWith("**", i) -> "**"
                     i + 1 < newline && source.startsWith("~~", i) -> "~~"
+                    i + 1 < newline && source.startsWith("==", i) -> "=="
+                    source.startsWith("{{/color}}", i) -> "{{/color}}"
+                    source.startsWith("{{red}}", i) -> "{{red}}"
+                    source.startsWith("{{blue}}", i) -> "{{blue}}"
+                    source.startsWith("{{green}}", i) -> "{{green}}"
+                    source.startsWith("{{purple}}", i) -> "{{purple}}"
                     source[i] == '_' && (italicStart >= 0 ||
                         ((i == contentStart || !source[i - 1].isLetterOrDigit()) &&
                             i + 1 < newline && source[i + 1].isLetterOrDigit())) -> "_"
@@ -69,6 +78,29 @@ class MarkdownNoteTransformation : VisualTransformation {
                 if (marker != null) {
                     for (offset in 1 until marker.length) sourceToOutput[i + offset] = output.length
                     when (marker) {
+                        "==" -> {
+                            if (highlightStart < 0) highlightStart = output.length else {
+                                if (output.length > highlightStart) spans.add(Triple(highlightStart, output.length,
+                                    SpanStyle(background = Color(0x66F6C85F), color = Color(0xFFFFE8A3))))
+                                highlightStart = -1
+                            }
+                        }
+                        "{{red}}", "{{blue}}", "{{green}}", "{{purple}}" -> {
+                            if (textColorStart < 0) {
+                                textColorStart = output.length
+                                activeTextColor = when (marker) {
+                                    "{{red}}" -> Color(0xFFFF8585)
+                                    "{{blue}}" -> Color(0xFF83B8FF)
+                                    "{{green}}" -> Color(0xFF80D6A0)
+                                    else -> Color(0xFFC5A2FF)
+                                }
+                            }
+                        }
+                        "{{/color}}" -> {
+                            if (textColorStart >= 0 && output.length > textColorStart) spans.add(Triple(textColorStart, output.length,
+                                SpanStyle(color = activeTextColor)))
+                            textColorStart = -1
+                        }
                         "**" -> {
                             if (boldStart < 0) boldStart = output.length else {
                                 if (output.length > boldStart) spans.add(Triple(boldStart, output.length, SpanStyle(fontWeight = FontWeight.Bold)))
@@ -107,6 +139,10 @@ class MarkdownNoteTransformation : VisualTransformation {
             if (strikeStart >= 0 && output.length > strikeStart) spans.add(Triple(strikeStart, output.length, SpanStyle(textDecoration = TextDecoration.LineThrough)))
             if (codeStart >= 0 && output.length > codeStart) spans.add(Triple(codeStart, output.length,
                 SpanStyle(fontFamily = FontFamily.Monospace, background = Color(0x443F3A52), color = Color(0xFFD8C9FF))))
+            if (highlightStart >= 0 && output.length > highlightStart) spans.add(Triple(highlightStart, output.length,
+                SpanStyle(background = Color(0x66F6C85F), color = Color(0xFFFFE8A3))))
+            if (textColorStart >= 0 && output.length > textColorStart) spans.add(Triple(textColorStart, output.length,
+                SpanStyle(color = activeTextColor)))
             if (heading && output.length > lineOutputStart) spans.add(Triple(lineOutputStart, output.length,
                 SpanStyle(fontSize = 21.sp, fontWeight = FontWeight.Bold)))
             if (quote && output.length > lineOutputStart) spans.add(Triple(lineOutputStart, output.length,
