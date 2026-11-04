@@ -287,7 +287,7 @@ fun BoardEditor(
                             textSize = 13f * zoom
                             textAlign = android.graphics.Paint.Align.CENTER
                             isAntiAlias = true
-                            if (node.shape == "text") color = android.graphics.Color.rgb(230, 224, 255)
+                            if (node.shape == "text") this.color = android.graphics.Color.rgb(230, 224, 255)
                         }
                         drawText(node.label.take(18), p.x, p.y + 5f * zoom, paint)
                     }
