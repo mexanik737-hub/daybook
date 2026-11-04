@@ -104,7 +104,7 @@ fun BoardEditor(
             shape = RoundedCornerShape(14.dp)
         )
         Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             listOf("rounded" to "Блок", "rect" to "Квадрат", "circle" to "Круг", "diamond" to "Ромб", "text" to "Текст").forEach { (shape, label) ->
                 FilterChip(selected = addShape == shape && !connectMode && !panMode, onClick = { addShape = shape; connectMode = false; connectFrom = null; panMode = false },
                     label = { Text(label) })
