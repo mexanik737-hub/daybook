@@ -513,7 +513,9 @@ private fun DaybookApp(
                         Spacer(Modifier.height(12.dp))
                         OutlinedTextField(value = bodyValue, onValueChange = { bodyValue = it }, modifier = Modifier.fillMaxWidth().weight(1f),
                             placeholder = { Text(if (editorKind == "task") "Описание и детали…" else "Начни записывать свою мысль…") },
-                            shape = RoundedCornerShape(16.dp), minLines = 8, textStyle = MaterialTheme.typography.bodyLarge.copy(color = ink))
+                            shape = RoundedCornerShape(16.dp), minLines = 8,
+                            visualTransformation = if (editorKind == "note") MarkdownNoteTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = ink))
                         if (editorKind == "task") {
                             Spacer(Modifier.height(12.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
